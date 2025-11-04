@@ -1,4 +1,4 @@
-﻿from flask import Flask
+﻿from flask import Flask, render_template
 from flask_cors import CORS
 from .routes import api_bp
 
@@ -18,11 +18,7 @@ def create_app():
     # Простой маршрут для проверки работы
     @app.route('/')
     def index():
-        return {
-            'message': 'Genetic Mutation Analyzer API',
-            'version': '1.0.0',
-            'status': 'running'
-        }
+        return render_template("index.html")
     
     @app.route('/health')
     def health():

@@ -8,12 +8,6 @@ from .utils.validators import Validators
 api_bp = Blueprint('api', __name__)
 validators = Validators()
 
-# Главная страница
-@api_bp.route('/')
-def index_page():
-    """Главная страница приложения"""
-    return render_template('index.html')
-
 @api_bp.route('/analyze', methods=['POST'])
 def analyze_mutations():
     """
