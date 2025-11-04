@@ -1,50 +1,58 @@
 ﻿import logging
-from typing import List, Dict, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional
 from requests import get
 from .api_utils import APIUtils, APIError, retry_on_failure
-from ..models.gene_models import ProteinDomain
+
 
 class UniProtClient:
-    """Клиент для работы с UniProt REST API (обновленная версия)"""
+    """Клиент для работы с UniProt REST API"""
     
     def __init__(self):
         self.api = APIUtils(
-            base_url="https://rest.uniprot.org",
+            base_url="https://rest.uniprot.org/uniprotkb",
             cache_config=CacheConfig(enabled=True, default_ttl=86400)
         )
         self.logger = logging.getLogger(__name__)
-        self._field_mapping = self._create_field_mapping()
     
-    def get_protein_domains(self, protein_id: str) -> List[ProteinDomain]:
+    def get_sequence_data(self, identifier: str) -> Tuple[str, int, int]:
         """
-        Получить домены белка
+        Получить последовательность белка из UniProt
+        Возвращает: (sequence, -1, -1) - UTR позиции не применимы для белков
         """
         try:
-            data = self._fetch_uniprot_data(protein_id)
-            return self._process_domains_data(data, protein_id)
-        except Exception as e:
-            self.logger.error(f"Failed to get domains for {protein_id}: {e}")
-            raise APIError(f"Failed to get protein domains: {e}")
-    
-    def get_protein_sequence(self, protein_id: str) -> str:
-        """
-        Получить аминокислотную последовательность белка
-        """
-        try:
-            data = self._fetch_uniprot_json(protein_id)
+            data = self._fetch_uniprot_data(identifier)
             return self._process_sequence_data(data)
         except Exception as e:
-            self.logger.error(f"Failed to get sequence for {protein_id}: {e}")
-            raise APIError(f"Failed to get protein sequence: {e}")
+            self.logger.error(f"Failed to get UniProt sequence for {identifier}: {e}")
+            raise APIError(f"Failed to get UniProt sequence: {e}")
+    
+    def get_protein_domains(self, identifier: str) -> List[Tuple[int, int, str]]:
+        """
+        Получить данные о доменах белка
+        Возвращает список кортежей: (start, end, description)
+        """
+        try:
+            data = self._fetch_uniprot_data(identifier)
+            return self._process_domains_data(data)
+        except Exception as e:
+            self.logger.error(f"Failed to get UniProt domains for {identifier}: {e}")
+            raise APIError(f"Failed to get UniProt domains: {e}")
+    
+    def get_protein_features(self, identifier: str) -> Dict[str, Any]:
+        """
+        Получить расширенную информацию о белке
+        """
+        try:
+            data = self._fetch_uniprot_data(identifier)
+            return self._process_features_data(data)
+        except Exception as e:
+            self.logger.error(f"Failed to get UniProt features for {identifier}: {e}")
+            raise APIError(f"Failed to get UniProt features: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_uniprot_data(self, protein_id: str) -> Dict[str, Any]:
-        """Получить данные из UniProt с доменами"""
-        fields = self._get_fields_for_protein(protein_id)
-        url = f"https://rest.uniprot.org/uniprotkb/{protein_id}.json"
-        
-        if fields:
-            url += f"?fields={fields}"
+    def _fetch_uniprot_data(self, identifier: str) -> Dict[str, Any]:
+        """Получить данные из UniProt REST API"""
+        url = f"https://rest.uniprot.org/uniprotkb/{identifier}.json"
         
         response = get(url)
         if not response.ok:
@@ -52,39 +60,103 @@ class UniProtClient:
         
         return response.json()
     
-    @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_uniprot_json(self, protein_id: str) -> Dict[str, Any]:
-        """Получить базовые данные из UniProt"""
-        url = f"https://rest.uniprot.org/uniprotkb/{protein_id}.json"
-        
-        response = get(url)
-        if not response.ok:
-            raise APIError(f"UniProt API error: {response.status_code}")
-        
-        return response.json()
+    def _process_sequence_data(self, data: Dict) -> Tuple[str, int, int]:
+        """Обработка данных последовательности белка"""
+        try:
+            sequence = data["sequence"]["value"]
+            # Для белковых последовательностей UTR позиции не применимы
+            utr5_start = -1
+            utr3_start = -1
+            
+            return sequence, utr5_start, utr3_start
+            
+        except KeyError as e:
+            self.logger.error(f"Sequence data not found in UniProt response: {e}")
+            raise APIError(f"Invalid UniProt response format: {e}")
+        except Exception as e:
+            self.logger.error(f"Error processing UniProt sequence: {e}")
+            raise APIError(f"Failed to process UniProt sequence: {e}")
     
-    def _get_fields_for_protein(self, protein_id: str) -> str:
-        """Получить поля для запроса based на protein_id"""
-        # Можно настроить маппинг для разных белков
-        default_fields = "accession,id,protein_name,gene_names,sequence,features"
+    def _process_domains_data(self, data: Dict) -> List[Tuple[int, int, str]]:
+        """Обработка данных доменов белка"""
+        domains = []
         
-        # Специфичные поля для известных белков
-        specific_fields = {
-            "p53": "accession,id,protein_name,gene_names,sequence,features,cc_function",
-            "brca1": "accession,id,protein_name,gene_names,sequence,features,cc_domain",
-            # Добавь другие белки по необходимости
-        }
-        
-        # Ищем по ключу или по подстроке в ID
-        for key, fields in specific_fields.items():
-            if key.lower() in protein_id.lower():
-                return fields
-        
-        return default_fields
+        try:
+            features = data.get("features", [])
+            
+            for feature in features:
+                if feature.get("type") in ["DOMAIN", "REPEAT", "MOTIF", "REGION"]:
+                    location = feature.get("location", {})
+                    start = location.get("start", {}).get("value", 0)
+                    end = location.get("end", {}).get("value", 0)
+                    description = feature.get("description", "Unknown domain")
+                    
+                    # Конвертируем в 0-based координаты если нужно
+                    if start > 0:
+                        start -= 1
+                    if end > 0:
+                        end -= 1
+                    
+                    domains.append((start, end, description))
+            
+            return sorted(domains, key=lambda x: x[0])
+            
+        except Exception as e:
+            self.logger.error(f"Error processing UniProt domains: {e}")
+            raise APIError(f"Failed to process UniProt domains: {e}")
     
-    def _create_field_mapping(self) -> Dict[str, str]:
-        """Создать маппинг полей для разных белков"""
-        return {
-            "p53": "accession,id,protein_name,gene_names,sequence,features,cc_function",
-            "brca1": "accession,id,protein_name,gene_names,sequence,features,cc_domain",
-            "cf
+    def _process_features_data(self, data: Dict) -> Dict[str, Any]:
+        """Обработка расширенной информации о белке"""
+        try:
+            protein_info = {
+                "accession": data.get("primaryAccession"),
+                "name": data.get("proteinDescription", {}).get("recommendedName", {}).get("fullName", {}).get("value"),
+                "gene_name": data.get("genes", [{}])[0].get("geneName", {}).get("value"),
+                "organism": data.get("organism", {}).get("scientificName"),
+                "sequence_length": data.get("sequence", {}).get("length"),
+                "features": [],
+                "comments": [],
+                "keywords": []
+            }
+            
+            # Обрабатываем features
+            for feature in data.get("features", []):
+                feature_info = {
+                    "type": feature.get("type"),
+                    "description": feature.get("description"),
+                    "start": feature.get("location", {}).get("start", {}).get("value"),
+                    "end": feature.get("location", {}).get("end", {}).get("value")
+                }
+                protein_info["features"].append(feature_info)
+            
+            # Обрабатываем comments
+            for comment in data.get("comments", []):
+                comment_info = {
+                    "type": comment.get("commentType"),
+                    "texts": []
+                }
+                
+                if "texts" in comment:
+                    for text in comment["texts"]:
+                        comment_info["texts"].append(text.get("value"))
+                
+                protein_info["comments"].append(comment_info)
+            
+            # Обрабатываем keywords
+            for keyword in data.get("keywords", []):
+                protein_info["keywords"].append(keyword.get("name"))
+            
+            return protein_info
+            
+        except Exception as e:
+            self.logger.error(f"Error processing UniProt features: {e}")
+            raise APIError(f"Failed to process UniProt features: {e}")
+    
+    # Старые методы для обратной совместимости
+    def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
+        """Старый метод для получения последовательности (совместимость)"""
+        return self.get_sequence_data(identifier)
+    
+    def get_domains_legacy(self, identifier: str) -> List[Tuple[int, int, str]]:
+        """Старый метод для получения доменов (совместимость)"""
+        return self.get_protein_domains(identifier)

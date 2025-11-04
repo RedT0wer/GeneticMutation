@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, request, jsonify
+﻿from flask import Blueprint, request, jsonify, render_template
 from .services import analysis_service, gene_service
 from .models.analysis_models import AnalysisRequest
 from .models.mutation_models import Mutation, MutationType
@@ -7,6 +7,12 @@ from .utils.validators import Validators
 # Создаем blueprint для API
 api_bp = Blueprint('api', __name__)
 validators = Validators()
+
+# Главная страница
+@api_bp.route('/')
+def index_page():
+    """Главная страница приложения"""
+    return render_template('index.html')
 
 @api_bp.route('/analyze', methods=['POST'])
 def analyze_mutations():

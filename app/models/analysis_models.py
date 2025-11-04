@@ -13,7 +13,7 @@ class AnalysisRequest:
     """Запрос на анализ"""
     gene_id: str
     species: str
-    mutations: List[Mutation]
+    mutations: List['Mutation']
     include_domains: bool = True
     include_visualization: bool = True
     cache_results: bool = True
@@ -32,7 +32,7 @@ class AnalysisRequest:
 class AnalysisResult:
     """Результат анализа"""
     request: AnalysisRequest
-    results: List[MutationResult]
+    results: List['MutationResult']
     status: AnalysisStatus
     execution_time: float
     timestamp: str

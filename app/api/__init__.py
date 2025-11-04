@@ -12,3 +12,7 @@ __all__ = [
     'CacheConfig',
     'retry_on_failure'
 ]
+
+ensembl_client = EnsemblClient()
+uniprot_client = UniProtClient()
+ncbi_client = NCBIClient()

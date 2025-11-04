@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetic Mutation Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🧬 Genetic Mutation Analyzer</h1>
+            <p>Analyze mutations and their impact on protein structure</p>
+        </header>
+
+        <!-- Панель ввода данных -->
+        <div class="input-panel">
+            <div class="input-group">
+                <label for="gene_id">Gene ID:</label>
+                <input type="text" id="gene_id" placeholder="e.g., ENSG00000139618" value="ENSG00000139618">
+                <button onclick="loadGene()">Load Gene</button>
+            </div>
+
+            <div class="input-group">
+                <label for="protein_id">Protein ID:</label>
+                <input type="text" id="protein_id" placeholder="e.g., P04637" value="P04637">
+                <button onclick="loadProtein()">Load Protein</button>
+            </div>
+        </div>
+
+        <!-- Панель мутаций -->
+        <div class="mutation-panel">
+            <h3>Mutation Controls</h3>
+            <div class="mutation-controls">
+                <select id="mutation_type">
+                    <option value="substitution">Substitution</option>
+                    <option value="deletion">Deletion</option>
+                    <option value="insertion">Insertion</option>
+                </select>
+                <input type="number" id="mutation_position" placeholder="Position" value="100">
+                <input type="text" id="mutation_sequence" placeholder="New sequence" value="A">
+                <button onclick="applyMutation()">Apply Mutation</button>
+                <button onclick="clearMutations()" class="secondary">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Основное содержимое -->
+        <div class="content">
+            <!-- Секция экзонов -->
+            <div class="section">
+                <h2>Exons</h2>
+                <div id="exons-display" class="sequence-display">
+                    <div class="placeholder">No exons loaded. Click "Load Gene" to load data.</div>
+                </div>
+            </div>
+
+            <!-- Секция доменов -->
+            <div class="domains-section">
+                <div class="domain-column">
+                    <h2>Original Domains</h2>
+                    <div id="original-domains" class="sequence-display">
+                        <div class="placeholder">No domains loaded. Click "Load Protein" to load data.</div>
+                    </div>
+                </div>
+
+                <div class="domain-column">
+                    <h2>Modified Domains</h2>
+                    <div id="modified-domains" class="sequence-display">
+                        <div class="placeholder">Apply mutation to see changes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статус бар -->
+        <div class="status-bar" id="status">
+            Ready to analyze mutations
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
