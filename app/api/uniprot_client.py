@@ -10,7 +10,7 @@ class UniProtClient:
     def __init__(self):
         self.api = APIUtils(
             base_url="https://rest.uniprot.org/uniprotkb",
-            cache_config=CacheConfig(enabled=True, default_ttl=86400)
+            #cache_config=CacheConfig(enabled=True, default_ttl=86400)
         )
         self.logger = logging.getLogger(__name__)
     

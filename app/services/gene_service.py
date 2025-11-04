@@ -15,7 +15,7 @@ class GeneService:
         self.bp_utils = BiopythonUtils()
         self.logger = logging.getLogger(__name__)
     
-    @cache(expire=3600)  # Кэшируем на 1 час
+    #@cache(expire=3600)  # Кэшируем на 1 час
     def get_gene_with_protein(self, gene_id: str, species: str = "human") -> Gene:
         """
         Получить полные данные о гене с белковой информацией

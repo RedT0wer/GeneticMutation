@@ -250,7 +250,7 @@ class MutationService:
         new_protein_sequence = self.bp_utils.translate_sequence(new_sequence)
         
         # Создаем модифицированный белок
-        modified_protein = Protein(
+        modified_protein = 'Protein'(
             id=original_gene.protein.id + "_modified",
             name=original_gene.protein.name,
             sequence=new_protein_sequence,
@@ -284,7 +284,7 @@ class MutationService:
         
         new_protein_sequence = self.bp_utils.translate_sequence(new_sequence)
         
-        modified_protein = Protein(
+        modified_protein = 'Protein'(
             id=original_gene.protein.id + "_modified",
             name=original_gene.protein.name,
             sequence=new_protein_sequence,
@@ -338,7 +338,7 @@ class MutationService:
         
         return changes
     
-    def _find_domain_changes(self, domains: List[ProteinDomain], aa_changes: List[AminoAcidChange]) -> List[Dict]:
+    def _find_domain_changes(self, domains: List['ProteinDomain'], aa_changes: List[AminoAcidChange]) -> List[Dict]:
         """Найти изменения в доменах"""
         domain_changes = []
         

@@ -10,7 +10,7 @@ class EnsemblClient:
     def __init__(self):
         self.api = APIUtils(
             base_url="https://rest.ensembl.org",
-            cache_config=CacheConfig(enabled=True, default_ttl=7200)
+            #cache_config=CacheConfig(enabled=True, default_ttl=7200)
         )
         self.logger = logging.getLogger(__name__)
     
