@@ -10,6 +10,9 @@ class Config:
     
     # Настройки API
     ENSEMBL_REST_URL = "https://rest.ensembl.org"
+    ENSEMBL_REST_URL_LOOKUP = f"https://rest.ensembl.org/lookup/id/"
+    ENSEMBL_REST_URL_SEQUENCE = f"https://rest.ensembl.org/sequence/id/"
+
     UNIPROT_REST_URL = "https://rest.uniprot.org"
     NCBI_EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     
