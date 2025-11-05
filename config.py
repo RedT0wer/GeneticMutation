@@ -14,7 +14,8 @@ class Config:
     ENSEMBL_REST_URL_SEQUENCE = f"https://rest.ensembl.org/sequence/id/"
 
     UNIPROT_REST_URL = "https://rest.uniprot.org"
-    NCBI_EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+
+    NCBI_EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     
     # Настройки кэша
     CACHE_ENABLED = True

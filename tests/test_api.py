@@ -2,6 +2,7 @@
 import json
 
 from app.api.ensembl_client import EnsemblClient
+from app.api.ncbi_client import NCBIClient
 
 @pytest.mark.api
 @pytest.mark.ensembl
@@ -49,17 +50,31 @@ class TestApiEnsembl:
 @pytest.mark.api
 @pytest.mark.ncbi
 class TestApiNcbi:
-    def test_ncbi_sequense(self):
-        pass
+    def test_ncbi_process_sequense(self):
+        ncbi_obj = NCBIClient()
+        identifier = "NM_003319"
+        data_ncbi = ncbi_obj.get_sequence_legacy(identifier)
 
-    def test_ncbi_exons(self):
-        pass
+        with open(f'tests/test_data/ncbi/ncbi_procces_seq_{identifier}.txt', 'r', encoding='utf-8') as f:
+            data = f.readline().strip()
+
+        assert data == str(data_ncbi), "Неверно обработана последовательность"
+
+    def test_ncbi_process_exons(self):
+        ncbi_obj = NCBIClient()
+        identifier = "NM_003319"
+        data_ncbi = ncbi_obj.get_exons_legacy(identifier)
+
+        with open(f'tests/test_data/ncbi/ncbi_procces_exons_{identifier}.txt', 'r', encoding='utf-8') as f:
+            data = f.readline().strip()
+
+        assert data == str(data_ncbi), "Неверно обработаны данные экзонов"
 
 @pytest.mark.api
 @pytest.mark.uniprot
 class TestApiUniProt:
-    def test_uniprot_sequense(self):
+    def test_uniprot_process_sequense(self):
         pass
 
-    def test_uniprot_exons(self):
+    def test_uniprot_process_exons(self):
         pass
