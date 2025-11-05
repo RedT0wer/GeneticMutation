@@ -3,6 +3,7 @@ import json
 
 from app.api.ensembl_client import EnsemblClient
 from app.api.ncbi_client import NCBIClient
+from app.api.uniprot_client import UniProtClient
 
 @pytest.mark.api
 @pytest.mark.ensembl
@@ -74,7 +75,21 @@ class TestApiNcbi:
 @pytest.mark.uniprot
 class TestApiUniProt:
     def test_uniprot_process_sequense(self):
-        pass
+        uniProtClient_obj = UniProtClient()
+        identifier = "Q8WZ42"
+        data_uniprot = uniProtClient_obj.get_sequence_legacy(identifier)
+
+        with open(f'tests/test_data/uniprot/uniprot_procces_seq_{identifier}.txt', 'r', encoding='utf-8') as f:
+            data = f.readline().strip()
+
+        assert data == str(data_uniprot), "Неверно обработана последовательность"
 
     def test_uniprot_process_exons(self):
-        pass
+        uniProtClient_obj = UniProtClient()
+        identifier = "Q8WZ42"
+        data_uniprot = uniProtClient_obj.get_domains_legacy(identifier)
+
+        with open(f'tests/test_data/uniprot/uniprot_procces_domains_{identifier}.txt', 'r', encoding='utf-8') as f:
+            data = f.readline().strip()
+
+        assert data == str(data_uniprot), "Неверно обработаны домены"

@@ -2,7 +2,7 @@
 from typing import Dict, List, Tuple, Any, Optional
 from requests import get
 from .api_utils import APIUtils, APIError, retry_on_failure
-
+from config import config
 
 class UniProtClient:
     """Клиент для работы с UniProt REST API"""
@@ -14,13 +14,13 @@ class UniProtClient:
         )
         self.logger = logging.getLogger(__name__)
     
-    def get_sequence_data(self, identifier: str) -> Tuple[str, int, int]:
+    def get_sequence_data(self, identifier: str) -> str:
         """
         Получить последовательность белка из UniProt
-        Возвращает: (sequence, -1, -1) - UTR позиции не применимы для белков
+        Возвращает: sequence
         """
         try:
-            data = self._fetch_uniprot_data(identifier)
+            data = self._fetch_uniprot_seq(identifier)
             return self._process_sequence_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get UniProt sequence for {identifier}: {e}")
@@ -32,7 +32,7 @@ class UniProtClient:
         Возвращает список кортежей: (start, end, description)
         """
         try:
-            data = self._fetch_uniprot_data(identifier)
+            data = self._fetch_uniprot_dom(identifier)
             return self._process_domains_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get UniProt domains for {identifier}: {e}")
@@ -43,16 +43,27 @@ class UniProtClient:
         Получить расширенную информацию о белке
         """
         try:
-            data = self._fetch_uniprot_data(identifier)
+            data = self._fetch_uniprot_dom(identifier)
             return self._process_features_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get UniProt features for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt features: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_uniprot_data(self, identifier: str) -> Dict[str, Any]:
+    def _fetch_uniprot_seq(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
-        url = f"https://rest.uniprot.org/uniprotkb/{identifier}.json"
+        url = config.UNIPROT_REST_URL + identifier
+        
+        response = get(url)
+        if not response.ok:
+            raise APIError(f"UniProt API error: {response.status_code}")
+        
+        return response.json()
+
+    @retry_on_failure(max_retries=3, delay=1.0)
+    def _fetch_uniprot_dom(self, identifier: str) -> Dict[str, Any]:
+        """Получить данные из UniProt REST API"""
+        url = config.UNIPROT_REST_URL + identifier + ".json" + "?fields=ft_domain%2Cft_compbias"
         
         response = get(url)
         if not response.ok:
@@ -60,15 +71,12 @@ class UniProtClient:
         
         return response.json()
     
-    def _process_sequence_data(self, data: Dict) -> Tuple[str, int, int]:
+    def _process_sequence_data(self, data: Dict) -> str:
         """Обработка данных последовательности белка"""
         try:
             sequence = data["sequence"]["value"]
-            # Для белковых последовательностей UTR позиции не применимы
-            utr5_start = -1
-            utr3_start = -1
             
-            return sequence, utr5_start, utr3_start
+            return sequence
             
         except KeyError as e:
             self.logger.error(f"Sequence data not found in UniProt response: {e}")
@@ -85,19 +93,19 @@ class UniProtClient:
             features = data.get("features", [])
             
             for feature in features:
-                if feature.get("type") in ["DOMAIN", "REPEAT", "MOTIF", "REGION"]:
-                    location = feature.get("location", {})
-                    start = location.get("start", {}).get("value", 0)
-                    end = location.get("end", {}).get("value", 0)
-                    description = feature.get("description", "Unknown domain")
+                #if feature.get("type") in ["DOMAIN", "REGION"]: #"REPEAT", "MOTIF", 
+                location = feature.get("location", {})
+                start = location.get("start", {}).get("value", 0)
+                end = location.get("end", {}).get("value", 0)
+                description = feature.get("description", "Unknown domain")
                     
-                    # Конвертируем в 0-based координаты если нужно
-                    if start > 0:
-                        start -= 1
-                    if end > 0:
-                        end -= 1
+                # Конвертируем в 0-based координаты если нужно
+                if start > 0:
+                    start -= 1
+                if end > 0:
+                    end -= 1
                     
-                    domains.append((start, end, description))
+                domains.append((start, end, description))
             
             return sorted(domains, key=lambda x: x[0])
             
@@ -153,7 +161,7 @@ class UniProtClient:
             raise APIError(f"Failed to process UniProt features: {e}")
     
     # Старые методы для обратной совместимости
-    def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
+    def get_sequence_legacy(self, identifier: str) -> str:
         """Старый метод для получения последовательности (совместимость)"""
         return self.get_sequence_data(identifier)
     

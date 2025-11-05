@@ -13,7 +13,7 @@ class Config:
     ENSEMBL_REST_URL_LOOKUP = f"https://rest.ensembl.org/lookup/id/"
     ENSEMBL_REST_URL_SEQUENCE = f"https://rest.ensembl.org/sequence/id/"
 
-    UNIPROT_REST_URL = "https://rest.uniprot.org"
+    UNIPROT_REST_URL = "https://rest.uniprot.org/uniprotkb/"
 
     NCBI_EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     
