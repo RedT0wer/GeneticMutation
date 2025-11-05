@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from requests import get
 from .api_utils import APIUtils, APIError, retry_on_failure
 from ..models.gene_models import Exon
+from config import config
 
 class NCBIClient:
     """Клиент для работы с NCBI EUtils API"""
@@ -41,7 +42,7 @@ class NCBIClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _fetch_ncbi_data(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из NCBI EUtils"""
-        url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        url = config.NCBI_EUTILS_URL
         params = {
             "db": "nuccore",
             "retmode": "xml",
@@ -117,11 +118,9 @@ class NCBIClient:
                     cds_start, cds_end = self._parse_location(location_str)
                     
                     # Вычисляем UTR позиции
-                    utr5_start = 0
-                    utr3_start = cds_end + 1
+                    utr5_start = cds_start
+                    utr3_start = cds_end
                     
-                    # Обрезаем последовательность до CDS если нужно
-                    sequence = sequence[cds_start:cds_end + 1]
                     break
             
             return sequence, utr5_start, utr3_start

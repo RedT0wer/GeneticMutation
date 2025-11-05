@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from requests import get
 from .api_utils import APIUtils, APIError, retry_on_failure
 from ..models.gene_models import Exon, Strand
+from config import config
 
 class EnsemblClient:
     """Клиент для работы с Ensembl REST API (обновленная версия)"""
@@ -45,7 +46,7 @@ class EnsemblClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _get_gene_with_exons(self, gene_id: str) -> Dict[str, Any]:
         """Получить расширенную информацию о гене с экзонами"""
-        url = f"https://rest.ensembl.org/lookup/id/{gene_id}"
+        url = config.ENSEMBL_REST_URL_LOOKUP + gene_id
         params = {
             "expand": "1",
             "content-type": "application/json"
@@ -60,7 +61,7 @@ class EnsemblClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _get_exon_sequences(self, transcript_id: str) -> Dict[str, Any]:
         """Получить последовательности экзонов"""
-        url = f"https://rest.ensembl.org/sequence/id/{transcript_id}"
+        url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
         params = {
             "mask_feature": "1",
             "type": "cdna", 
@@ -77,7 +78,7 @@ class EnsemblClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _get_sequence(self, identifier: str) -> Dict[str, Any]:
         """Получить последовательность (оригинальный метод)"""
-        url = f"https://rest.ensembl.org/sequence/id/{identifier}"
+        url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
         params = {
             "mask_feature": "1",
             "type": "cdna",
