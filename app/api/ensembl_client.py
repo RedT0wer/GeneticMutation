@@ -101,13 +101,13 @@ class EnsemblClient:
         
         # Обрабатываем каждый экзон
         current_position = 0
-        for i, exon_data in enumerate(raw_exons, 1):
-            # Получаем последовательность экзона
-            exon_sequence = self._extract_exon_sequence(exon_data.get("id"), exon_sequences)
-            
+        for i, exon_data in enumerate(raw_exons, 1):            
             # Вычисляем позиции в конкатенированной последовательности
             start_pos = current_position
-            end_pos = current_position + len(exon_sequence) - 1
+            end_pos = current_position + int(exon_data.get("end")) - int(exon_data.get("start"))
+
+            # Получаем последовательность экзона
+            exon_sequence = self._extract_exon_sequence(start_pos, end_pos, exon_sequences)
             
             exon = Exon(
                 number=i,
@@ -123,17 +123,14 @@ class EnsemblClient:
         
         return exons
     
-    def _extract_exon_sequence(self, exon_id: str, exon_sequences: Dict) -> str:
+    def _extract_exon_sequence(self, start_pos: int, end_pos: int, exon_sequences: Dict) -> str:
         """Извлечь последовательность конкретного экзона"""
-        if isinstance(exon_sequences, list):
-            for exon_seq in exon_sequences:
-                if exon_seq.get("id") == exon_id:
-                    return exon_seq.get("seq", "")
-        elif isinstance(exon_sequences, dict) and exon_sequences.get("id") == exon_id:
-            return exon_sequences.get("seq", "")
-        
-        self.logger.warning(f"Sequence not found for exon {exon_id}")
-        return ""
+        try:
+            sequence = exon_sequences.get("seq")
+            return sequence[start_pos:end_pos + 1]
+        except:
+            self.logger.warning(f"Sequence not found for exon {start_pos}:{end_pos}")
+            return ""
     
     def _process_sequence_data(self, response: Dict) -> Tuple[str, int, int]:
         """Обработка данных последовательности"""
