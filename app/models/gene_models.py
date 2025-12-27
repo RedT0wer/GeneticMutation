@@ -1,10 +1,5 @@
 ﻿from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
-from enum import Enum
-
-class Strand(Enum):
-    FORWARD = "+"
-    REVERSE = "-"
 
 @dataclass
 class Exon:
@@ -14,8 +9,6 @@ class Exon:
     start_position: int
     end_position: int
     length: int
-    is_modified: bool = False
-    modifications: List[Dict] = field(default_factory=list)
     
     def __post_init__(self):
         if self.length == 0:
@@ -28,8 +21,61 @@ class Exon:
             'start_position': self.start_position,
             'end_position': self.end_position,
             'length': self.length,
-            'is_modified': self.is_modified,
-            'modifications': self.modifications
+        }
+
+@dataclass
+class UTR:
+    """Модель нетраснлируемой области"""
+    sequence: str
+    start_position: int
+    end_position: int
+    length: int
+
+    def __post_init__(self):
+        if self.length == 0:
+            self.length = len(self.sequence)
+
+    def to_dict(self) -> Dict:
+        return {
+            'sequence': self.sequence,
+            'start_position': self.start_position,
+            'end_position': self.end_position,
+            'length': self.length,
+        }
+
+@dataclass
+class BaseSequence:
+    """Модель последовательности нуклеотидов"""
+    identifier: str
+    length: int
+    exons: List[Exon]
+    utr3: UTR
+    utr5: UTR
+
+    def __post_init__(self):
+        if self.length == 0:
+            self.length = sum([exon.length for exon in self.exons])
+
+        # Сортируем экзоны по номеру
+        self.exons.sort(key=lambda x: x.number)
+
+    @property
+    def full_sequence(self) -> str:
+        """Полная нуклеотидная последовательность"""
+        return ''.join(exon.sequence for exon in self.exons)
+    
+    @property
+    def coding_sequence(self) -> str:
+        """Полная нуклеотидная последовательность"""
+        return ''.join(exon.sequence for exon in self.exons)[self.utr3.length:self.utr5.length]
+
+    def to_dict(self) -> Dict:
+        return {
+            'identifier': self.identifier,
+            'length': self.length,
+            'exons': [exon.to_dict() for exon in self.exons],
+            'utr3': self.utr3.to_dict(),
+            'utr5': self.utr5.to_dict(),
         }
 
 @dataclass
@@ -68,13 +114,10 @@ class ProteinDomain:
 @dataclass
 class Protein:
     """Модель белка"""
-    id: str
-    name: str
+    identifier: str
     sequence: str
     length: int
     domains: List[ProteinDomain]
-    molecular_weight: Optional[float] = None
-    is_modified: bool = False
     
     def __post_init__(self):
         if self.length == 0:
@@ -82,62 +125,35 @@ class Protein:
     
     def to_dict(self) -> Dict:
         return {
-            'id': self.id,
-            'name': self.name,
-            'sequence': self.sequence,
+            'identifier': self.identifier,
             'length': self.length,
+            'sequence': self.sequence,
             'domains': [domain.to_dict() for domain in self.domains],
-            'molecular_weight': self.molecular_weight,
-            'is_modified': self.is_modified
         }
 
 @dataclass
 class Gene:
     """Модель гена"""
-    id: str
-    name: str
-    species: str
-    chromosome: str
-    strand: Strand
     protein: Protein
-    exons: List[Exon]
-    transcript_id: Optional[str] = None
-    
-    def __post_init__(self):
-        # Сортируем экзоны по номеру
-        self.exons.sort(key=lambda x: x.number)
-    
-    @property
-    def full_sequence(self) -> str:
-        """Полная нуклеотидная последовательность"""
-        return ''.join(exon.sequence for exon in self.exons)
-    
-    @property
-    def exons_count(self) -> int:
-        return len(self.exons)
-    
+    base_sequence: BaseSequence
+
     def to_dict(self) -> Dict:
         return {
-            'id': self.id,
-            'name': self.name,
-            'species': self.species,
-            'chromosome': self.chromosome,
-            'strand': self.strand.value,
             'protein': self.protein.to_dict(),
-            'exons': [exon.to_dict() for exon in self.exons],
-            'transcript_id': self.transcript_id,
-            'exons_count': self.exons_count
+            'base_sequence': self.base_sequence.to_dict(),
         }
+
+    def _translate_nucleotide_position(self, nucleotide_position: int) -> int:
+        """"Пересчет позиции из-за смещения некодируемой области"""
+        return nucleotide_position - 1 - self.base_sequence.utr5.length
     
     def find_exon_by_position(self, nucleotide_position: int) -> Optional[Exon]:
         """Найти экзон по позиции нуклеотида"""
-        current_pos = 0
+        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
         for exon in self.exons:
-            exon_end = current_pos + exon.length
-            if current_pos <= nucleotide_position < exon_end:
-                return exon, current_pos
-            current_pos = exon_end
-        return None, -1
+            if exon.start_position <= nucleotide_position_in_base_sequence <= exon.end_position:
+                return exon
+        return None
     
     def get_amino_acid_position(self, nucleotide_position: int) -> int:
         """Получить позицию аминокислоты по позиции нуклеотида"""
