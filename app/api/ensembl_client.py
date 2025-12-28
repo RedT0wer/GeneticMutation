@@ -146,7 +146,7 @@ class EnsemblClient:
         while utr3_start >= 0 and sequence[len(sequence) - 1 - utr3_start].islower():
             utr3_start += 1
         
-        return sequence, utr5_start, utr3_start
+        return sequence.upper(), utr5_start, utr3_start
     
     # Старые методы для обратной совместимости
     def get_exons_legacy(self, identifier: str) -> List[Tuple[int, int]]:

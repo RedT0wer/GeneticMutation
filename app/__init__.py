@@ -20,10 +20,6 @@ def create_app():
     def index():
         return render_template("index.html")
     
-    @app.route('/health')
-    def health():
-        return {'status': 'healthy'}
-    
     return app
 
 # Глобальный экземпляр приложения

@@ -122,11 +122,13 @@ class Protein:
 class Gene:
     """Модель гена"""
     protein: Protein
+    translated_protein: Protein
     base_sequence: BaseSequence
 
     def to_dict(self) -> Dict:
         return {
             'protein': self.protein.to_dict(),
+            'translated_protein': self.translated_protein.to_dict(),
             'base_sequence': self.base_sequence.to_dict(),
         }
 

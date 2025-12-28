@@ -14,11 +14,7 @@ class GeneService:
         self.ncbi_client = NCBIClient()
         self.ensembl_client = EnsemblClient()
     
-    def build_gene_from_ensembl(
-        self, 
-        gene_id: str, 
-        protein_id: str
-    ) -> Optional[Gene]:
+    def build_gene_from_ensembl(self, gene_id: str, protein_id: str) -> Optional[Gene]:
         """
         Построить ген из данных Ensembl + UniProt
         
@@ -30,15 +26,18 @@ class GeneService:
             logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
             
             # 1. Получаем экзоны из Ensembl
-            exons = self.ensembl_client.get_exons_data(gene_id)
+            raw_exons = self.ensembl_client.get_exons_legacy(gene_id)
             
             # 2. Получаем последовательность и UTR из Ensembl
             sequence, utr5_start, utr3_start = self.ensembl_client.get_sequence_data(gene_id)
             
             # 3. Создаём UTR объекты
-            utr5, utr3 = self._create_utrs(sequence, utr5_start, utr3_start)
+            utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
+
+            # 4. Создание экзонов
+            exons = self._build_exons(raw_exons, sequence, utr5, utr3)
             
-            # 4. Создаём базовую последовательность
+            # 5. Создаём базовую последовательность
             base_sequence = BaseSequence(
                 identifier=gene_id,
                 length=len(sequence),
@@ -47,12 +46,16 @@ class GeneService:
                 utr5=utr5
             )
             
-            # 5. Получаем белок из UniProt
+            # 6. Получаем белок из UniProt
             protein = self._build_protein_from_uniprot(protein_id)
+
+            # 7. Создание транслируемого белка
+            translated_protein = self._translated_base_nucleotide()
             
-            # 6. Создаём ген
+            # 8. Создаём ген
             gene = Gene(
                 protein=protein,
+                translated_protein=translated_protein,
                 base_sequence=base_sequence
             )
             
@@ -63,11 +66,7 @@ class GeneService:
             logger.error(f"Error building gene from Ensembl: {e}", exc_info=True)
             return None
     
-    def build_gene_from_ncbi(
-        self,
-        ncbi_id: str,
-        protein_id: str
-    ) -> Optional[Gene]:
+    def build_gene_from_ncbi(self, ncbi_id: str, protein_id: str) -> Optional[Gene]:
         """
         Построить ген из данных NCBI + UniProt
         """
@@ -75,15 +74,18 @@ class GeneService:
             logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
             
             # 1. Получаем экзоны из NCBI
-            exons = self.ncbi_client.get_exons_data(ncbi_id)
+            raw_exons = self.ncbi_client.get_exons_legacy(ncbi_id)
             
             # 2. Получаем последовательность и UTR из NCBI
             sequence, utr5_start, utr3_start = self.ncbi_client.get_sequence_data(ncbi_id)
             
             # 3. Создаём UTR объекты
-            utr5, utr3 = self._create_utrs(sequence, utr5_start, utr3_start)
+            utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
+
+            # 4. Создание экзонов
+            exons = self._build_exons(raw_exons, sequence, utr5, utr3)
             
-            # 4. Создаём базовую последовательность
+            # 5. Создаём базовую последовательность
             base_sequence = BaseSequence(
                 identifier=ncbi_id,
                 length=len(sequence),
@@ -92,12 +94,16 @@ class GeneService:
                 utr5=utr5
             )
             
-            # 5. Получаем белок из UniProt
+            # 6. Получаем белок из UniProt
             protein = self._build_protein_from_uniprot(protein_id)
+
+            # 7. Создание транслируемого белка
+            translated_protein = self._translated_base_nucleotide()
             
-            # 6. Создаём ген
+            # 8. Создаём ген
             gene = Gene(
                 protein=protein,
+                translated_protein=translated_protein,
                 base_sequence=base_sequence
             )
             
@@ -108,13 +114,83 @@ class GeneService:
             logger.error(f"Error building gene from NCBI: {e}", exc_info=True)
             return None
     
-    def _create_utrs(
-        self, 
-        sequence: str, 
-        utr5_start: int, 
-        utr3_start: int
-    ) -> Tuple[UTR, UTR]:
-        """Создать UTR объекты из позиций"""
+    def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
+        """
+        Построить объект Protein из данных UniProt
+        """
+        try:
+            # 1. Получаем последовательность белка
+            protein_seq = self.uniprot_client.get_sequence_data(protein_id)
+            
+            # 2. Получаем домены белка (start, end, description)
+            domains_data = self.uniprot_client.get_protein_domains(protein_id)
+            
+            # 3. Создаём объекты ProteinDomain
+            domains = self._build_protein_domains(protein_seq, domains_data)
+            
+            # 4. Создаём объект Protein
+            protein = Protein(
+                identifier=protein_id,
+                sequence=protein_seq,
+                length=len(protein_seq),
+                domains=domains
+            )
+            
+            return protein
+            
+        except Exception as e:
+            logger.error(f"Error building protein {protein_id}: {e}")
+            return None
+    
+    def _build_exons(self, raw_exons: List[Tuple[int, int]], sequence: str, utr5: UTR, utr3: UTR) -> List[Exon]:
+        """
+        Создание экзонов
+        """
+
+        exons = []
+
+        # Обрабатываем каждый экзон
+        prev_end_phase = -1
+        for i, exon_data in enumerate(raw_exons, 1):            
+            # Вычисляем позиции в конкатенированной последовательности
+            start_pos,end_pos = exon_data
+
+            # Получаем последовательность экзона
+            exon_sequence = sequence[start_pos:end_pos+1]
+
+            # Считаем начало кодирующей области
+            if utr5.start_position < start_pos:
+                start_phase = -1
+                end_phase = -1
+            elif start_pos <= utr5.start_position <= end_pos:
+                start_phase = utr5.start_position - start_pos
+                end_phase = (len(exon_sequence) - start_phase) % 3
+            elif start_pos <= utr3.start_position <= end_pos:
+                start_phase = utr5.start_position - start_pos
+                end_phase = utr3.start_position
+            else:
+                start_phase = 3 - prev_end_phase
+                end_phase = (len(exon_sequence) - start_phase) % 3
+            prev_end_phase = end_phase
+
+            exon = Exon(
+                number=i,
+                sequence=exon_sequence,
+                start_position=start_pos,
+                end_position=end_pos,
+                start_phase=start_phase,
+                end_phase=end_phase,
+                length=len(exon_sequence),
+            )
+            
+            exons.append(exon)
+        
+        return exons
+
+    def _build_utrs(self, sequence: str, utr5_start: int, utr3_start: int) -> Tuple[UTR, UTR]:
+        """
+        Создать UTR объекты из позиций
+        """
         
         # Если позиции неизвестны
         if utr5_start == -1 and utr3_start == -1:
@@ -136,90 +212,46 @@ class GeneService:
         )
         
         # 3' UTR
-        utr3_seq = sequence[utr3_start:] if utr3_start > 0 else ""
+        utr3_seq = sequence[-utr3_start:] if utr3_start > 0 else ""
         utr3 = UTR(
             sequence=utr3_seq,
-            start_position=utr3_start if utr3_start > 0 else -1,
+            start_position=len(sequence) - 1 - utr3_start if utr3_start > 0 else -1,
             end_position=len(sequence) - 1,
             length=len(utr3_seq)
         )
         
         return utr5, utr3
     
-    def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
-        """Построить объект Protein из данных UniProt"""
-        try:
-            # 1. Получаем последовательность белка
-            protein_seq = self.uniprot_client.get_sequence_data(protein_id)
-            
-            # 2. Получаем домены белка (start, end, description)
-            domains_data = self.uniprot_client.get_protein_domains(protein_id)
-            
-            # 3. Создаём объекты ProteinDomain
-            domains = []
-            for start, end, description in domains_data:
-                # Вырезаем последовательность домена
-                domain_seq = protein_seq[start:end + 1] if start < len(protein_seq) else ""
+    def _translated_base_nucleotide(self):
+        return None
+
+    def _build_protein_domains(self, protein_seq: str, domains_data: List[Tuple[int, int, str]]) -> List[ProteinDomain]:
+        """
+        Создание доменов белка
+        """
+        domains = []
+        for start, end, description in domains_data:
+            # Вырезаем последовательность домена
+            domain_seq = protein_seq[start:end + 1]
                 
-                domain = ProteinDomain(
-                    name=description or f"Domain_{start}_{end}",
-                    start=start,
-                    end=end,
-                    sequence=domain_seq,
-                    type="domain",  # Можно уточнить из feature type
-                )
-                domains.append(domain)
-            
-            # 4. Создаём объект Protein
-            protein = Protein(
-                identifier=protein_id,
-                sequence=protein_seq,
-                length=len(protein_seq),
-                domains=domains
+            domain = ProteinDomain(
+                name=description,
+                start=start,
+                end=end,
+                sequence=domain_seq,
+                type="domain",
             )
-            
-            return protein
-            
-        except Exception as e:
-            logger.error(f"Error building protein {protein_id}: {e}")
-            # Возвращаем минимальный белок в случае ошибки
-            return Protein(
-                identifier=protein_id,
-                sequence="",
-                length=0,
-                domains=[]
-            )
-    
-    def get_exon_by_position(
-        self, 
-        gene: Gene, 
-        nucleotide_position: int
-    ) -> Optional[Exon]:
-        """Найти экзон по позиции нуклеотида в гене"""
+            domains.append(domain)
+        return domains
+
+    def get_exon_by_position(self, gene: Gene, nucleotide_position: int) -> Optional[Exon]:
+        """
+        Найти экзон по позиции нуклеотида в гене
+        """
         return gene.find_exon_by_position(nucleotide_position)
     
-    def get_amino_acid_position(
-        self, 
-        gene: Gene, 
-        nucleotide_position: int
-    ) -> int:
-        """Получить позицию аминокислоты по позиции нуклеотида"""
+    def get_amino_acid_position(self, gene: Gene, nucleotide_position: int) -> int:
+        """
+        Получить позицию аминокислоты по позиции нуклеотида
+        """
         return gene.get_amino_acid_position(nucleotide_position)
-    
-    def update_exon_phases(self, gene: Gene) -> Gene:
-        """
-        Обновить фазы экзонов (start_phase, end_phase)
-        Вычисляется на основе рамки считывания
-        """
-        # TODO: Реализовать вычисление фаз
-        # Для первого экзона start_phase = 0
-        # Для следующих: start_phase = end_phase предыдущего экзона
-        # end_phase = (start_phase + длина экзона) % 3
-        
-        current_phase = 0
-        for exon in gene.base_sequence.exons:
-            exon.start_phase = current_phase
-            current_phase = (current_phase + exon.length) % 3
-            exon.end_phase = current_phase
-        
-        return gene
