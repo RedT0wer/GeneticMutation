@@ -1,5 +1,7 @@
 ﻿from typing import List, Tuple, Optional, Dict
 import logging
+
+from ..services.translation_service import TranslationService
 from ..models.gene_models import Gene, Protein, BaseSequence, Exon, UTR, ProteinDomain
 from ..api import EnsemblClient, UniProtClient, NCBIClient
 
@@ -13,6 +15,7 @@ class GeneService:
         self.uniprot_client = UniProtClient()
         self.ncbi_client = NCBIClient()
         self.ensembl_client = EnsemblClient()
+        self.translation_service = TranslationService()
     
     def build_gene_from_ensembl(self, gene_id: str, protein_id: str) -> Optional[Gene]:
         """
@@ -232,7 +235,7 @@ class GeneService:
         nucleotide_sequence = base_sequence.full_sequence
 
         # 2. 
-        protein_sequence = Gene.translation_sequence(nucleotide_sequence, base_sequence.utr5.end_position + 1, base_sequence.utr3.start_position)
+        protein_sequence = self.translation_service.translation_sequence(nucleotide_sequence, base_sequence.utr5.end_position + 1, base_sequence.utr3.start_position)
 
         # 3.
         domains: List[ProteinDomain] = []
@@ -263,7 +266,7 @@ class GeneService:
                     domains.append(connection)
 
                 dom = ProteinDomain(
-                    name=domain.name,
+                    name=name,
                     start=index,
                     end=index + len(seq) - 1,
                     sequence=seq,
@@ -299,15 +302,3 @@ class GeneService:
             )
             domains.append(domain)
         return domains
-
-    def get_exon_by_position(self, gene: Gene, nucleotide_position: int) -> Optional[Exon]:
-        """
-        Найти экзон по позиции нуклеотида в гене
-        """
-        return gene.find_exon_by_position(nucleotide_position)
-    
-    def get_amino_acid_position(self, gene: Gene, nucleotide_position: int) -> int:
-        """
-        Получить позицию аминокислоты по позиции нуклеотида
-        """
-        return gene.get_amino_acid_position(nucleotide_position)

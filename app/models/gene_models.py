@@ -1,5 +1,4 @@
-﻿from dataclasses import dataclass, field
-from typing import ClassVar
+﻿from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Tuple
 
 @dataclass
@@ -71,6 +70,31 @@ class BaseSequence:
     def coding_sequence(self) -> str:
         """Полная нуклеотидная последовательность"""
         return ''.join(exon.sequence for exon in self.exons)[self.utr3.length:self.utr5.length]
+        
+    def _translate_nucleotide_position(self, nucleotide_position: int) -> int:
+        """"Пересчет позиции из-за смещения некодируемой области"""
+        return nucleotide_position - 1 + self.utr5.length
+    
+    def find_exon_by_position(self, nucleotide_position: int) -> Optional[Exon]:
+        """Найти экзон по позиции нуклеотида"""
+        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
+        for exon in self.exons:
+            if exon.start_position <= nucleotide_position_in_base_sequence <= exon.end_position:
+                return exon
+        return None
+
+    def substitution_nucleotide_in_exon(self, nucleotide_position: int, nucleotide: str) -> None:
+        exon = self.find_exon_by_position(nucleotide_position)
+        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
+        sequence = list(exon.sequence)
+        sequence[nucleotide_position_in_base_sequence - exon.start_position] = nucleotide
+        exon.sequence = ''.join(sequence)
+
+    def get_codon_by_nucleotide(self, nucleotide_position: int) -> str:
+        """Получить кодон по номеру нуклеотида"""
+        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
+        index = (nucleotide_position_in_base_sequence // 3 ) * 3
+        return self.full_sequence[index:index + 3]
 
     def to_dict(self) -> Dict:
         return {
@@ -111,6 +135,9 @@ class Protein:
         if self.length == 0:
             self.length = len(self.sequence)
 
+    def get_amino_acid(self, amino_acid_position: int) -> str:
+        return self.sequence[amino_acid_position]
+
     def to_dict(self) -> Dict:
         return {
             'identifier': self.identifier,
@@ -125,39 +152,6 @@ class Gene:
     protein: Protein
     translated_protein: Protein
     base_sequence: BaseSequence
-    translation: ClassVar[Dict[str, str]] = {
-        'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
-        'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
-        'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
-        'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
-        'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
-        'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
-        'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
-        'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
-        'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
-        'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
-        'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
-        'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
-        'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
-        'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
-        'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
-        'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
-    }
-
-    @classmethod
-    def translation_sequence(cls, sequense: str, start: int, end: int) -> str:
-        seqAminoacid = ""
-        for i in range(start, end + 1, 3):
-            codon = sequense[i] + sequense[i + 1] + sequense[i + 2]
-            aminoacid = cls.get_aminoacid(codon)
-            seqAminoacid += aminoacid
-            if aminoacid == "*": 
-                break
-        return seqAminoacid
-    
-    @classmethod
-    def get_aminoacid(cls, codon: str) -> str:
-        return cls.translation[codon]
 
     def to_dict(self) -> Dict:
         return {
@@ -165,19 +159,3 @@ class Gene:
             'translated_protein': self.translated_protein.to_dict(),
             'base_sequence': self.base_sequence.to_dict(),
         }
-
-    def _translate_nucleotide_position(self, nucleotide_position: int) -> int:
-        """"Пересчет позиции из-за смещения некодируемой области"""
-        return nucleotide_position - 1 - self.base_sequence.utr5.length
-    
-    def find_exon_by_position(self, nucleotide_position: int) -> Optional[Exon]:
-        """Найти экзон по позиции нуклеотида"""
-        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
-        for exon in self.exons:
-            if exon.start_position <= nucleotide_position_in_base_sequence <= exon.end_position:
-                return exon
-        return None
-    
-    def get_amino_acid_position(self, nucleotide_position: int) -> int:
-        """Получить позицию аминокислоты по позиции нуклеотида"""
-        return nucleotide_position // 3
