@@ -1,176 +1,225 @@
-﻿import logging
-from typing import Dict, List, Optional, Tuple
+﻿from typing import List, Tuple, Optional, Dict
+import logging
+from ..models.gene_models import Gene, Protein, BaseSequence, Exon, UTR, ProteinDomain
 from ..api import EnsemblClient, UniProtClient, NCBIClient
-from ..models.gene_models import Gene, Protein, Exon, ProteinDomain, Strand
-from ..core.biopython_utils import BiopythonUtils
-from ..utils.cache import cache
+
+
+logger = logging.getLogger(__name__)
 
 class GeneService:
-    """Сервис для работы с генами и белковыми данными"""
-    
+    """Сервис для загрузки и построения структуры гена с использованием новых клиентов""" 
     def __init__(self):
-        self.ensembl = EnsemblClient()
-        self.uniprot = UniProtClient()
-        self.ncbi = NCBIClient()
-        self.bp_utils = BiopythonUtils()
-        self.logger = logging.getLogger(__name__)
+        # Инициализация клиентов API
+        self.uniprot_client = UniProtClient()
+        self.ncbi_client = NCBIClient()
+        self.ensembl_client = EnsemblClient()
     
-    #@cache(expire=3600)  # Кэшируем на 1 час
-    def get_gene_with_protein(self, gene_id: str, species: str = "human") -> Gene:
+    def build_gene_from_ensembl(
+        self, 
+        gene_id: str, 
+        protein_id: str
+    ) -> Optional[Gene]:
         """
-        Получить полные данные о гене с белковой информацией
+        Построить ген из данных Ensembl + UniProt
+        
+        Args:
+            gene_id: ENSEMBL ID (например, ENSG00000139618)
+            protein_id: UniProt ID (например, P04637)
         """
         try:
-            self.logger.info(f"Loading gene data for {gene_id}")
+            logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
             
-            # Получаем геномные данные из Ensembl
-            ensembl_data = self.ensembl.get_gene_info(gene_id, species)
+            # 1. Получаем экзоны из Ensembl
+            exons = self.ensembl_client.get_exons_data(gene_id)
             
-            # Получаем экзоны
-            exons = self._get_exons_data(gene_id, ensembl_data)
+            # 2. Получаем последовательность и UTR из Ensembl
+            sequence, utr5_start, utr3_start = self.ensembl_client.get_sequence_data(gene_id)
             
-            # Получаем белковые данные
-            protein = self._get_protein_data(ensembl_data.get('protein_id'))
+            # 3. Создаём UTR объекты
+            utr5, utr3 = self._create_utrs(sequence, utr5_start, utr3_start)
             
-            # Создаем объект гена
-            gene = Gene(
-                id=gene_id,
-                name=ensembl_data.get('gene_name', gene_id),
-                species=species,
-                chromosome=ensembl_data.get('chromosome', 'unknown'),
-                strand=Strand.FORWARD if ensembl_data.get('strand') == 1 else Strand.REVERSE,
-                protein=protein,
+            # 4. Создаём базовую последовательность
+            base_sequence = BaseSequence(
+                identifier=gene_id,
+                length=len(sequence),
                 exons=exons,
-                transcript_id=ensembl_data.get('transcript_id')
+                utr3=utr3,
+                utr5=utr5
             )
             
-            self.logger.info(f"Successfully loaded gene {gene_id} with {len(exons)} exons")
+            # 5. Получаем белок из UniProt
+            protein = self._build_protein_from_uniprot(protein_id)
+            
+            # 6. Создаём ген
+            gene = Gene(
+                protein=protein,
+                base_sequence=base_sequence
+            )
+            
+            logger.info(f"Gene built: {len(exons)} exons, {len(protein.domains)} domains")
             return gene
             
         except Exception as e:
-            self.logger.error(f"Failed to load gene {gene_id}: {e}")
-            raise
+            logger.error(f"Error building gene from Ensembl: {e}", exc_info=True)
+            return None
     
-    def _get_exons_data(self, gene_id: str) -> List[Exon]:
-        """Получить данные об экзонах"""
+    def build_gene_from_ncbi(
+        self,
+        ncbi_id: str,
+        protein_id: str
+    ) -> Optional[Gene]:
+        """
+        Построить ген из данных NCBI + UniProt
+        """
         try:
-            # Пробуем получить из Ensembl
-            exons = self.ensembl.get_exons_data(gene_id)
-            if exons:
-                return exons
-        except Exception as e:
-            self.logger.warning(f"Failed to get exons from Ensembl for {gene_id}: {e}")
-        
-        try:
-            # Fallback на NCBI
-            exons = self.ncbi.get_exons_data(gene_id)
-            if exons:
-                return exons
-        except Exception as e:
-            self.logger.warning(f"Failed to get exons from NCBI for {gene_id}: {e}")
-    
-    def _get_protein_data(self, protein_id: str) -> Protein:
-        """Получить данные о белке"""
-        if not protein_id:
-            raise ValueError("Protein ID is required")
-        
-        try:
-            # Получаем последовательность и домены из UniProt
-            sequence = self.uniprot.get_protein_sequence(protein_id)
-            domains = self.uniprot.get_protein_domains(protein_id)
+            logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
             
-            # Рассчитываем молекулярную массу
-            molecular_weight = self.bp_utils.calculate_molecular_weight(sequence)
+            # 1. Получаем экзоны из NCBI
+            exons = self.ncbi_client.get_exons_data(ncbi_id)
             
-            return Protein(
-                id=protein_id,
-                name=f"Protein {protein_id}",
-                sequence=sequence,
+            # 2. Получаем последовательность и UTR из NCBI
+            sequence, utr5_start, utr3_start = self.ncbi_client.get_sequence_data(ncbi_id)
+            
+            # 3. Создаём UTR объекты
+            utr5, utr3 = self._create_utrs(sequence, utr5_start, utr3_start)
+            
+            # 4. Создаём базовую последовательность
+            base_sequence = BaseSequence(
+                identifier=ncbi_id,
                 length=len(sequence),
-                domains=domains,
-                molecular_weight=molecular_weight
+                exons=exons,
+                utr3=utr3,
+                utr5=utr5
             )
             
+            # 5. Получаем белок из UniProt
+            protein = self._build_protein_from_uniprot(protein_id)
+            
+            # 6. Создаём ген
+            gene = Gene(
+                protein=protein,
+                base_sequence=base_sequence
+            )
+            
+            logger.info(f"Gene built from NCBI: {len(exons)} exons")
+            return gene
+            
         except Exception as e:
-            self.logger.error(f"Failed to get protein data for {protein_id}: {e}")
-            # Возвращаем белок с минимальными данными
+            logger.error(f"Error building gene from NCBI: {e}", exc_info=True)
+            return None
+    
+    def _create_utrs(
+        self, 
+        sequence: str, 
+        utr5_start: int, 
+        utr3_start: int
+    ) -> Tuple[UTR, UTR]:
+        """Создать UTR объекты из позиций"""
+        
+        # Если позиции неизвестны
+        if utr5_start == -1 and utr3_start == -1:
+            empty_utr = UTR(
+                sequence="",
+                start_position=-1,
+                end_position=-1,
+                length=0
+            )
+            return empty_utr, empty_utr
+        
+        # 5' UTR
+        utr5_seq = sequence[:utr5_start] if utr5_start > 0 else ""
+        utr5 = UTR(
+            sequence=utr5_seq,
+            start_position=0,
+            end_position=len(utr5_seq) - 1 if utr5_seq else -1,
+            length=len(utr5_seq)
+        )
+        
+        # 3' UTR
+        utr3_seq = sequence[utr3_start:] if utr3_start > 0 else ""
+        utr3 = UTR(
+            sequence=utr3_seq,
+            start_position=utr3_start if utr3_start > 0 else -1,
+            end_position=len(sequence) - 1,
+            length=len(utr3_seq)
+        )
+        
+        return utr5, utr3
+    
+    def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
+        """Построить объект Protein из данных UniProt"""
+        try:
+            # 1. Получаем последовательность белка
+            protein_seq = self.uniprot_client.get_sequence_data(protein_id)
+            
+            # 2. Получаем домены белка (start, end, description)
+            domains_data = self.uniprot_client.get_protein_domains(protein_id)
+            
+            # 3. Создаём объекты ProteinDomain
+            domains = []
+            for start, end, description in domains_data:
+                # Вырезаем последовательность домена
+                domain_seq = protein_seq[start:end + 1] if start < len(protein_seq) else ""
+                
+                domain = ProteinDomain(
+                    name=description or f"Domain_{start}_{end}",
+                    start=start,
+                    end=end,
+                    sequence=domain_seq,
+                    type="domain",  # Можно уточнить из feature type
+                )
+                domains.append(domain)
+            
+            # 4. Создаём объект Protein
+            protein = Protein(
+                identifier=protein_id,
+                sequence=protein_seq,
+                length=len(protein_seq),
+                domains=domains
+            )
+            
+            return protein
+            
+        except Exception as e:
+            logger.error(f"Error building protein {protein_id}: {e}")
+            # Возвращаем минимальный белок в случае ошибки
             return Protein(
-                id=protein_id,
-                name=f"Protein {protein_id}",
+                identifier=protein_id,
                 sequence="",
                 length=0,
                 domains=[]
             )
     
-    def _create_mock_exons(self, ensembl_data: Dict) -> List[Exon]:
-        """Создать mock экзоны если данные недоступны"""
-        exons = []
-        transcript = ensembl_data.get('transcript', {})
-        exon_data = transcript.get('Exon', []) if transcript else []
+    def get_exon_by_position(
+        self, 
+        gene: Gene, 
+        nucleotide_position: int
+    ) -> Optional[Exon]:
+        """Найти экзон по позиции нуклеотида в гене"""
+        return gene.find_exon_by_position(nucleotide_position)
+    
+    def get_amino_acid_position(
+        self, 
+        gene: Gene, 
+        nucleotide_position: int
+    ) -> int:
+        """Получить позицию аминокислоты по позиции нуклеотида"""
+        return gene.get_amino_acid_position(nucleotide_position)
+    
+    def update_exon_phases(self, gene: Gene) -> Gene:
+        """
+        Обновить фазы экзонов (start_phase, end_phase)
+        Вычисляется на основе рамки считывания
+        """
+        # TODO: Реализовать вычисление фаз
+        # Для первого экзона start_phase = 0
+        # Для следующих: start_phase = end_phase предыдущего экзона
+        # end_phase = (start_phase + длина экзона) % 3
         
-        current_position = 0
-        for i, exon_info in enumerate(exon_data, 1):
-            exon_length = exon_info.get('end', 0) - exon_info.get('start', 0) + 1
-            exon = Exon(
-                number=i,
-                sequence="N" * exon_length,  # Mock последовательность
-                start_position=current_position,
-                end_position=current_position + exon_length - 1,
-                length=exon_length
-            )
-            exons.append(exon)
-            current_position += exon_length
+        current_phase = 0
+        for exon in gene.base_sequence.exons:
+            exon.start_phase = current_phase
+            current_phase = (current_phase + exon.length) % 3
+            exon.end_phase = current_phase
         
-        return exons
-    
-    def search_genes(self, query: str, species: str = "human", limit: int = 10) -> List[Dict]:
-        """Поиск генов по названию или символу"""
-        try:
-            # Пробуем поиск в Ensembl
-            results = self.ensembl.search_genes(query, species, limit)
-            if results:
-                return results
-            
-            # Fallback на UniProt для поиска белков
-            protein_results = self.uniprot.search_proteins(query, species, limit)
-            return [
-                {
-                    'gene_id': protein.get('gene_names', ''),
-                    'gene_name': protein.get('protein_name', ''),
-                    'species': species,
-                    'protein_id': protein.get('protein_id', '')
-                }
-                for protein in protein_results
-            ]
-            
-        except Exception as e:
-            self.logger.error(f"Gene search failed for {query}: {e}")
-            return []
-    
-    def validate_gene_id(self, gene_id: str, species: str = "human") -> bool:
-        """Проверить валидность ID гена"""
-        try:
-            data = self.ensembl.get_gene_info(gene_id, species)
-            return bool(data and data.get('id'))
-        except Exception:
-            return False
-    
-    def get_available_species(self) -> List[str]:
-        """Получить список доступных видов"""
-        try:
-            return self.ensembl.get_species_list()
-        except Exception as e:
-            self.logger.error(f"Failed to get species list: {e}")
-            return ['human', 'mouse', 'rat']  # Fallback
-    
-    def clear_gene_cache(self, gene_id: str = None):
-        """Очистить кэш генов"""
-        try:
-            if gene_id:
-                # Очищаем кэш для конкретного гена
-                cache.delete(f"gene_{gene_id}")
-            else:
-                # Очищаем весь кэш генов
-                cache.clear_pattern("gene_")
-        except Exception as e:
-            self.logger.warning(f"Failed to clear gene cache: {e}")
+        return gene

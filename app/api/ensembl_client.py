@@ -2,7 +2,7 @@
 from typing import List, Dict, Any, Optional, Tuple
 from requests import get
 from .api_utils import APIUtils, APIError, retry_on_failure
-from ..models.gene_models import Exon, Strand
+from ..models.gene_models import Exon
 from config import config
 
 class EnsemblClient:
@@ -115,8 +115,9 @@ class EnsemblClient:
                 sequence=exon_sequence,
                 start_position=start_pos,
                 end_position=end_pos,
+                start_phase=0,
+                end_phase=0,
                 length=len(exon_sequence),
-                is_modified=False
             )
             
             exons.append(exon)
@@ -137,10 +138,13 @@ class EnsemblClient:
         """Обработка данных последовательности"""
         sequence = response.get("seq", "")
         
-        # Для Ensembl UTR позиции обычно не предоставляются в этом endpoint
-        # Можно получить их из другого endpoint или оставить -1
-        utr5_start = -1
-        utr3_start = -1
+        utr5_start = 0 if sequence[utr5_start].islower() else -1
+        while utr5_start < len(sequence) and sequence[utr5_start].islower():
+            utr5_start += 1
+
+        utr3_start = 0 if sequence[-1].islower() else -1
+        while utr3_start >= 0 and sequence[len(sequence) - 1 - utr3_start].islower():
+            utr3_start += 1
         
         return sequence, utr5_start, utr3_start
     

@@ -84,8 +84,9 @@ class NCBIClient:
                         sequence=exon_sequence,
                         start_position=current_position,
                         end_position=current_position + len(exon_sequence) - 1,
+                        start_phase=0,
+                        end_phase=0,
                         length=len(exon_sequence),
-                        is_modified=False
                     )
                     
                     exons.append(exon)

@@ -36,7 +36,7 @@ class TestApiEnsembl:
         with open('tests/test_data/ensembl/ensembl_procces_seq_460472.txt', 'r', encoding='utf-8') as f:
             data = f.readline().strip()
 
-        assert data == str(data_ensembl), "Неверно обработана последовательность"
+        assert data == str(data_ensembl), f"Неверно обработана последовательность: {data_ensembl[-20:]}"
 
     def test_ensembl_process_exons(self):
         ensembl_obj = EnsemblClient()

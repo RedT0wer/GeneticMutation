@@ -8,6 +8,8 @@ class Exon:
     sequence: str
     start_position: int
     end_position: int
+    start_phase: int
+    end_phase: int
     length: int
     
     def __post_init__(self):
@@ -86,17 +88,6 @@ class ProteinDomain:
     end: int
     sequence: str
     type: str = "unknown"
-    description: str = ""
-    is_modified: bool = False
-    changes: List[Dict] = field(default_factory=list)
-    
-    def __post_init__(self):
-        if not self.sequence:
-            self.sequence = ""
-    
-    @property
-    def length(self) -> int:
-        return self.end - self.start + 1
     
     def to_dict(self) -> Dict:
         return {
@@ -105,10 +96,6 @@ class ProteinDomain:
             'end': self.end,
             'sequence': self.sequence,
             'type': self.type,
-            'description': self.description,
-            'is_modified': self.is_modified,
-            'changes': self.changes,
-            'length': self.length
         }
 
 @dataclass

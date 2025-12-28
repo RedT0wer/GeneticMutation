@@ -1,6 +1,7 @@
 ﻿from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 from enum import Enum
+from ..models.gene_models import ProteinDomain
 
 class MutationType(Enum):
     SUBSTITUTION = "substitution"
@@ -29,29 +30,41 @@ class InsertionMutation(Mutation):
 @dataclass
 class DeletionMutation(Mutation):
     """Удаление нуклеотидов"""
-    deleted_sequence: str = ""
     start_position: int
     end_position: int
 
 @dataclass
-class DeletionExonMutation(Mutation):
+class ExonDeletionMutation(Mutation):
     """Удаление экзона"""
     number_exon: int
 
-@dataclass 
-class MutationResult:
-    """Результат применения мутации"""
-    mutation: Mutation
-    context: MutationContext
-    
-    # Влияние на последовательности
-    original_base_sequence: str
-    mutated_base_sequence: str
-    original_protein_sequence: Optional[str]
-    mutated_protein_sequence: Optional[str]
-    
-    # Эффекты
-    changes_amino_acid: bool
-    creates_stop_codon: bool
-    affects_domain: bool
-    domains_changed: List[ProteinDomain]
+@dataclass
+class BaseMutationResult:
+    """Базовый результат мутации"""
+    pass
+
+@dataclass
+class SubstitutionResult(BaseMutationResult):
+    """Результат замены нуклеотида"""
+    new_aminoacid: str
+
+@dataclass
+class InsertionResult(BaseMutationResult):
+    """Результат вставки нуклеотида"""
+    new_domain: ProteinDomain
+    different_position: int
+    stop_codon_position: int
+
+@dataclass
+class DeletionResult(BaseMutationResult):
+    """Результат удаления нуклеотида"""
+    new_domain: ProteinDomain
+    different_position: int
+    stop_codon_position: int
+
+@dataclass
+class ExonDeletionResult(BaseMutationResult):
+    """Результат удаления экзона"""
+    new_domain: ProteinDomain
+    different_position: int
+    stop_codon_position: int

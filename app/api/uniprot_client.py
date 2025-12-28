@@ -38,17 +38,6 @@ class UniProtClient:
             self.logger.error(f"Failed to get UniProt domains for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt domains: {e}")
     
-    def get_protein_features(self, identifier: str) -> Dict[str, Any]:
-        """
-        Получить расширенную информацию о белке
-        """
-        try:
-            data = self._fetch_uniprot_dom(identifier)
-            return self._process_features_data(data)
-        except Exception as e:
-            self.logger.error(f"Failed to get UniProt features for {identifier}: {e}")
-            raise APIError(f"Failed to get UniProt features: {e}")
-    
     @retry_on_failure(max_retries=3, delay=1.0)
     def _fetch_uniprot_seq(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
@@ -112,53 +101,6 @@ class UniProtClient:
         except Exception as e:
             self.logger.error(f"Error processing UniProt domains: {e}")
             raise APIError(f"Failed to process UniProt domains: {e}")
-    
-    def _process_features_data(self, data: Dict) -> Dict[str, Any]:
-        """Обработка расширенной информации о белке"""
-        try:
-            protein_info = {
-                "accession": data.get("primaryAccession"),
-                "name": data.get("proteinDescription", {}).get("recommendedName", {}).get("fullName", {}).get("value"),
-                "gene_name": data.get("genes", [{}])[0].get("geneName", {}).get("value"),
-                "organism": data.get("organism", {}).get("scientificName"),
-                "sequence_length": data.get("sequence", {}).get("length"),
-                "features": [],
-                "comments": [],
-                "keywords": []
-            }
-            
-            # Обрабатываем features
-            for feature in data.get("features", []):
-                feature_info = {
-                    "type": feature.get("type"),
-                    "description": feature.get("description"),
-                    "start": feature.get("location", {}).get("start", {}).get("value"),
-                    "end": feature.get("location", {}).get("end", {}).get("value")
-                }
-                protein_info["features"].append(feature_info)
-            
-            # Обрабатываем comments
-            for comment in data.get("comments", []):
-                comment_info = {
-                    "type": comment.get("commentType"),
-                    "texts": []
-                }
-                
-                if "texts" in comment:
-                    for text in comment["texts"]:
-                        comment_info["texts"].append(text.get("value"))
-                
-                protein_info["comments"].append(comment_info)
-            
-            # Обрабатываем keywords
-            for keyword in data.get("keywords", []):
-                protein_info["keywords"].append(keyword.get("name"))
-            
-            return protein_info
-            
-        except Exception as e:
-            self.logger.error(f"Error processing UniProt features: {e}")
-            raise APIError(f"Failed to process UniProt features: {e}")
     
     # Старые методы для обратной совместимости
     def get_sequence_legacy(self, identifier: str) -> str:
