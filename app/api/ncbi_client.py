@@ -124,7 +124,7 @@ class NCBIClient:
                     
                     break
             
-            return sequence, utr5_start, utr3_start
+            return sequence, utr5_start, len(sequence) - utr3_start - 1
             
         except Exception as e:
             self.logger.error(f"Error processing NCBI sequence: {e}")

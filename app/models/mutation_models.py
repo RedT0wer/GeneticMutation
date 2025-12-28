@@ -23,7 +23,7 @@ class SubstitutionMutation(Mutation):
 @dataclass
 class InsertionMutation(Mutation):
     """Вставка нуклеотидов"""
-    inserted_sequence: str = ""
+    inserted_sequence: str
     start_position: int
     end_position: int
 

@@ -138,7 +138,7 @@ class EnsemblClient:
         """Обработка данных последовательности"""
         sequence = response.get("seq", "")
         
-        utr5_start = 0 if sequence[utr5_start].islower() else -1
+        utr5_start = 0 if sequence[0].islower() else -1
         while utr5_start < len(sequence) and sequence[utr5_start].islower():
             utr5_start += 1
 
