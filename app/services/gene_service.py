@@ -50,7 +50,7 @@ class GeneService:
             protein = self._build_protein_from_uniprot(protein_id)
 
             # 7. Создание транслируемого белка
-            translated_protein = self._translated_base_nucleotide()
+            translated_protein = self._translated_base_nucleotide(base_sequence, protein)
             
             # 8. Создаём ген
             gene = Gene(
@@ -222,8 +222,67 @@ class GeneService:
         
         return utr5, utr3
     
-    def _translated_base_nucleotide(self):
-        return None
+    def _translated_base_nucleotide(self, base_sequence: BaseSequence, protein: Protein) -> Protein:
+        """
+        Построить объект Protein из BaseSequence
+        """
+        try:
+            # 1. 
+            nucleotide_sequence = base_sequence.full_sequence
+            
+            # 2. 
+            protein_sequence = Gene.transaltion_sequense(nucleotide_sequence, base_sequence.utr5.start_position, base_sequence.utr3.start_position)
+            
+            # 3.
+            domains: List[ProteinDomain] = []
+            for domain in protein.domains:
+                name, seq = domain.name, domain.sequence
+                index = protein_sequence.find(seq)
+                if index == -1:
+                    continue
+                else:
+                    if domains == [] and index != 0:
+                        connection = ProteinDomain(
+                            name=="connection",
+                            start=0,
+                            end=index-1,
+                            sequence=protein_sequence[:index],
+                            type="unknown"
+                        )
+                        domains.append(connection)
+                    elif domains and domains[-1].start_position + 1 < index:
+                        prev = domains[-1]
+                        connection = ProteinDomain(
+                            name=="connection",
+                            start=prev.end + 1,
+                            end=index - 1,
+                            sequence=protein_sequence[prev.end + 1:index],
+                            type=domain.type
+                        )
+                        domains.append(connection)
+
+                    dom = ProteinDomain(
+                        name=domain.name,
+                        start=index,
+                        end=index + len(seq) - 1,
+                        sequence=seq,
+                        type=domain.type
+                    )
+                    domains.append(dom)
+            
+            # 4. Создаём объект Protein
+            protein = Protein(
+                identifier=base_sequence.identifier,
+                sequence=protein_sequence,
+                length=len(protein_sequence),
+                domains=domains,
+            )
+            
+            return protein
+            
+        except Exception as e:
+            logger.error(f"Error building protein {base_sequence.identifier}: {e}")
+            return None
 
     def _build_protein_domains(self, protein_seq: str, domains_data: List[Tuple[int, int, str]]) -> List[ProteinDomain]:
         """
