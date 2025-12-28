@@ -98,7 +98,7 @@ class GeneService:
             protein = self._build_protein_from_uniprot(protein_id)
 
             # 7. Создание транслируемого белка
-            translated_protein = self._translated_base_nucleotide()
+            translated_protein = self._translated_base_nucleotide(base_sequence, protein)
             
             # 8. Создаём ген
             gene = Gene(
@@ -150,7 +150,7 @@ class GeneService:
         exons = []
 
         # Обрабатываем каждый экзон
-        prev_end_phase = -1
+        prev_end_phase = 0
         for i, exon_data in enumerate(raw_exons, 1):            
             # Вычисляем позиции в конкатенированной последовательности
             start_pos,end_pos = exon_data
@@ -159,17 +159,19 @@ class GeneService:
             exon_sequence = sequence[start_pos:end_pos+1]
 
             # Считаем начало кодирующей области
-            if utr5.start_position < start_pos:
+            end_exons = False
+            if utr5.end_position > end_pos or end_exons:
                 start_phase = -1
                 end_phase = -1
-            elif start_pos <= utr5.start_position <= end_pos:
-                start_phase = utr5.start_position - start_pos
-                end_phase = (len(exon_sequence) - start_phase) % 3
+            elif start_pos <= utr5.end_position <= end_pos:
+                start_phase = utr5.length - start_pos + 1
+                end_phase = (len(exon_sequence) + 1 - start_phase) % 3
             elif start_pos <= utr3.start_position <= end_pos:
-                start_phase = utr5.start_position - start_pos
-                end_phase = utr3.start_position
+                start_phase = (3 - prev_end_phase) % 3
+                end_phase = end_pos - utr3.start_position
+                end_exons = True
             else:
-                start_phase = 3 - prev_end_phase
+                start_phase = (3 - prev_end_phase) % 3
                 end_phase = (len(exon_sequence) - start_phase) % 3
             prev_end_phase = end_phase
 
