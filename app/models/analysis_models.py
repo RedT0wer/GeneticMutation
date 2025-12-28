@@ -2,12 +2,6 @@
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
-class AnalysisStatus(Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    ERROR = "error"
-
 @dataclass
 class AnalysisRequest:
     """Запрос на анализ"""

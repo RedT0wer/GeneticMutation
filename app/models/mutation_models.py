@@ -4,94 +4,54 @@ from enum import Enum
 
 class MutationType(Enum):
     SUBSTITUTION = "substitution"
-    DELETION = "deletion"
     INSERTION = "insertion"
+    DELETION = "deletion"
     EXON_DELETION = "exon_deletion"
-    MULTIPLE = "multiple"
-
-class ImpactSeverity(Enum):
-    LOW = "low"
-    MODERATE = "moderate"
-    HIGH = "high"
-
-@dataclass
-class AminoAcidChange:
-    """Изменение аминокислоты"""
-    position: int
-    original: str
-    new: str
-    type: str  # 'substitution', 'deletion', 'insertion'
-    codon_change: Optional[str] = None
-    is_stop_codon: bool = False
-    is_frameshift: bool = False
-    
-    def to_dict(self) -> Dict:
-        return {
-            'position': self.position,
-            'original': self.original,
-            'new': self.new,
-            'type': self.type,
-            'codon_change': self.codon_change,
-            'is_stop_codon': self.is_stop_codon,
-            'is_frameshift': self.is_frameshift
-        }
 
 @dataclass
 class Mutation:
-    """Модель мутации"""
-    type: MutationType
-    position: int
-    length: int = 1
-    original_sequence: str = ""
-    new_sequence: str = ""
-    exon_number: Optional[int] = None
-    description: str = ""
-    
-    def to_dict(self) -> Dict:
-        return {
-            'type': self.type.value,
-            'position': self.position,
-            'length': self.length,
-            'original_sequence': self.original_sequence,
-            'new_sequence': self.new_sequence,
-            'exon_number': self.exon_number,
-            'description': self.description
-        }
+    """Базовая модель мутации"""
+    mutation_type: MutationType
 
 @dataclass
+class SubstitutionMutation(Mutation):
+    """Замена одного нуклеотида"""
+    new_nucleotide: str
+    position_nucleotide: int
+
+@dataclass
+class InsertionMutation(Mutation):
+    """Вставка нуклеотидов"""
+    inserted_sequence: str = ""
+    start_position: int
+    end_position: int
+
+@dataclass
+class DeletionMutation(Mutation):
+    """Удаление нуклеотидов"""
+    deleted_sequence: str = ""
+    start_position: int
+    end_position: int
+
+@dataclass
+class DeletionExonMutation(Mutation):
+    """Удаление экзона"""
+    number_exon: int
+
+@dataclass 
 class MutationResult:
-    """Результат анализа мутации"""
+    """Результат применения мутации"""
     mutation: Mutation
-    original_gene: 'Gene'
-    modified_gene: 'Gene'
-    amino_acid_changes: List[AminoAcidChange]
-    impact_severity: ImpactSeverity
-    stop_codon_position: Optional[int] = None
-    is_frameshift: bool = False
-    domain_changes: List[Dict] = field(default_factory=list)
-    visualization_data: Dict[str, Any] = field(default_factory=dict)
+    context: MutationContext
     
-    @property
-    def has_structural_changes(self) -> bool:
-        """Есть ли изменения в структуре белка"""
-        return any(change.type != 'silent' for change in self.amino_acid_changes)
+    # Влияние на последовательности
+    original_base_sequence: str
+    mutated_base_sequence: str
+    original_protein_sequence: Optional[str]
+    mutated_protein_sequence: Optional[str]
     
-    @property
-    def protein_length_change(self) -> int:
-        """Изменение длины белка"""
-        return len(self.modified_gene.protein.sequence) - len(self.original_gene.protein.sequence)
-    
-    def to_dict(self) -> Dict:
-        return {
-            'mutation': self.mutation.to_dict(),
-            'original_gene': self.original_gene.to_dict(),
-            'modified_gene': self.modified_gene.to_dict(),
-            'amino_acid_changes': [change.to_dict() for change in self.amino_acid_changes],
-            'impact_severity': self.impact_severity.value,
-            'stop_codon_position': self.stop_codon_position,
-            'is_frameshift': self.is_frameshift,
-            'domain_changes': self.domain_changes,
-            'visualization_data': self.visualization_data,
-            'has_structural_changes': self.has_structural_changes,
-            'protein_length_change': self.protein_length_change
-        }
+    # Эффекты
+    changes_amino_acid: bool
+    creates_stop_codon: bool
+    affects_domain: bool
+    domains_changed: List[ProteinDomain]

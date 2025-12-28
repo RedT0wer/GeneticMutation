@@ -78,7 +78,7 @@ class EnsemblClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _get_sequence(self, identifier: str) -> Dict[str, Any]:
         """Получить последовательность (оригинальный метод)"""
-        url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
+        url = config.ENSEMBL_REST_URL_SEQUENCE + identifier
         params = {
             "mask_feature": "1",
             "type": "cdna",

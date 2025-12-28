@@ -1,6 +1,6 @@
 ﻿import logging
 from typing import Dict, List, Optional, Tuple
-from ..api import ensembl_client, uniprot_client, ncbi_client
+from ..api import EnsemblClient, UniProtClient, NCBIClient
 from ..models.gene_models import Gene, Protein, Exon, ProteinDomain, Strand
 from ..core.biopython_utils import BiopythonUtils
 from ..utils.cache import cache
@@ -9,9 +9,9 @@ class GeneService:
     """Сервис для работы с генами и белковыми данными"""
     
     def __init__(self):
-        self.ensembl = ensembl_client
-        self.uniprot = uniprot_client
-        self.ncbi = ncbi_client
+        self.ensembl = EnsemblClient()
+        self.uniprot = UniProtClient()
+        self.ncbi = NCBIClient()
         self.bp_utils = BiopythonUtils()
         self.logger = logging.getLogger(__name__)
     
@@ -51,7 +51,7 @@ class GeneService:
             self.logger.error(f"Failed to load gene {gene_id}: {e}")
             raise
     
-    def _get_exons_data(self, gene_id: str, ensembl_data: Dict) -> List[Exon]:
+    def _get_exons_data(self, gene_id: str) -> List[Exon]:
         """Получить данные об экзонах"""
         try:
             # Пробуем получить из Ensembl
@@ -68,9 +68,6 @@ class GeneService:
                 return exons
         except Exception as e:
             self.logger.warning(f"Failed to get exons from NCBI for {gene_id}: {e}")
-        
-        # Если оба источника не сработали, создаем mock данные из Ensembl
-        return self._create_mock_exons(ensembl_data)
     
     def _get_protein_data(self, protein_id: str) -> Protein:
         """Получить данные о белке"""

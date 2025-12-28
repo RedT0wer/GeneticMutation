@@ -6,7 +6,6 @@ if __name__ == '__main__':
     print("Запуск Genetic Mutation Analyzer...")
     print("API доступно по адресу: http://localhost:5000")
     print("Документация API: http://localhost:5000/api/")
-    print("Проверка здоровья: http://localhost:5000/health")
     print("-" * 50)
     
     app.run(
