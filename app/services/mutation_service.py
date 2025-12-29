@@ -8,6 +8,7 @@ from ..services.translation_service import TranslationService
 
 class MutationStrategy:
     """Базовый класс стратегии мутации"""
+    translation_service = TranslationService()
     
     def execute(self, mutation: Mutation, gene: Gene) -> BaseMutationResult:
         raise NotImplementedError()
@@ -53,20 +54,34 @@ class SubstitutionStrategy(MutationStrategy):
         self._substitute_nucleotide_in_exon(exon, position_in_exon, new_nucleotide)
         codon = self._get_codon_by_nucleotide(gene.base_sequence.full_sequence, global_position)
 
-        translation_service = TranslationService()
-
-        new_aminoacid = translation_service.get_aminoacid(codon)
+        new_aminoacid = self.translation_service.get_aminoacid(codon)
 
         return SubstitutionResult(new_aminoacid=new_aminoacid)
 
 
 class InsertionStrategy(MutationStrategy):
     """Стратегия для вставки нуклеотидов"""
+
+    def _substitute_nucleotide_in_exon(self, sequence: str, global_position: int, inserted_sequence: str):
+        """Заменить нуклеотид в экзоне"""
+        sequence = list(sequence)
+        sequence = sequence[:global_position + 1] + list(inserted_sequence) + sequence[global_position + 1:]
+        return ''.join(sequence)
     
     def execute(self, mutation: InsertionMutation, gene: Gene) -> BaseMutationResult:
-        # Здесь должна быть логика вставки нуклеотидов
+        inserted_sequence = mutation.inserted_sequence
+        start_position = mutation.start_position
+        end_position = mutation.end_position
+
+        global_position = self._translate_nucleotide_position(start_position, gene.base_sequence.utr5)
+        sequence = self._substitute_nucleotide_in_exon(gene.base_sequence.full_sequence, global_position, inserted_sequence)
+        
+        protein_sequence = self.translation_service.translation_sequence(sequence, global_position, len(sequence)-1)
+
+        protein_domain = ProteinDomain("mutation", 0, 0, protein_sequence, "unknown")
+
         return InsertionResult(
-            new_domain=None,  # Здесь должен быть ProteinDomain
+            new_domain=protein_domain,
             different_position=0,
             stop_codon_position=0
         )

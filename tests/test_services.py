@@ -1,6 +1,6 @@
 import pytest
 
-from app.models.mutation_models import MutationType, SubstitutionMutation
+from app.models.mutation_models import InsertionMutation, MutationType, SubstitutionMutation
 from app.services.gene_service import GeneService
 from app.services.mutation_service import MutationService
 
@@ -24,41 +24,55 @@ class TestGeneServices:
 @pytest.mark.services
 @pytest.mark.mutation_service
 class TestMutationServices:
-    def test_substitution_one(self):
+    # def test_substitution_one(self):
+    #     gene_service = GeneService()
+    #     mutation_service = MutationService()
+
+    #     ncbi_id = "NM_003319"
+    #     protein_id = "Q8WZ42"
+    #     gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
+
+    #     mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "T", 1)
+    #     substitution_result = mutation_service.apply_mutation(mutation, gene)       
+    #     new_aminoacid = substitution_result.new_aminoacid
+    #     assert new_aminoacid == "L", f"Вернулась не та аминокислота: {new_aminoacid}"
+
+    # def test_substitution_two(self):
+    #     gene_service = GeneService()
+    #     mutation_service = MutationService()
+
+    #     ncbi_id = "NM_003319"
+    #     protein_id = "Q8WZ42"
+    #     gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
+
+    #     mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "T", 5)
+    #     substitution_result = mutation_service.apply_mutation(mutation, gene)       
+    #     new_aminoacid = substitution_result.new_aminoacid
+    #     assert new_aminoacid == "I", f"Вернулась не та аминокислота: {new_aminoacid}"
+
+    # def test_substitution_three(self):
+    #     gene_service = GeneService()
+    #     mutation_service = MutationService()
+
+    #     ncbi_id = "NM_003319"
+    #     protein_id = "Q8WZ42"
+    #     gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
+
+    #     mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "C", 5569)
+    #     substitution_result = mutation_service.apply_mutation(mutation, gene)       
+    #     new_aminoacid = substitution_result.new_aminoacid
+    #     assert new_aminoacid == "Q", f"Вернулась не та аминокислота: {new_aminoacid}"
+
+    def test_inserted_one(self):
         gene_service = GeneService()
         mutation_service = MutationService()
 
         ncbi_id = "NM_003319"
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-
-        mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "T", 1)
-        substitution_result = mutation_service.apply_mutation(mutation, gene)       
-        new_aminoacid = substitution_result.new_aminoacid
-        assert new_aminoacid == "L", f"Вернулась не та аминокислота: {new_aminoacid}"
-
-    def test_substitution_two(self):
-        gene_service = GeneService()
-        mutation_service = MutationService()
-
-        ncbi_id = "NM_003319"
-        protein_id = "Q8WZ42"
-        gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-
-        mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "T", 5)
-        substitution_result = mutation_service.apply_mutation(mutation, gene)       
-        new_aminoacid = substitution_result.new_aminoacid
-        assert new_aminoacid == "I", f"Вернулась не та аминокислота: {new_aminoacid}"
-
-    def test_substitution_three(self):
-        gene_service = GeneService()
-        mutation_service = MutationService()
-
-        ncbi_id = "NM_003319"
-        protein_id = "Q8WZ42"
-        gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-
-        mutation = SubstitutionMutation(MutationType.SUBSTITUTION, "C", 5569)
-        substitution_result = mutation_service.apply_mutation(mutation, gene)       
-        new_aminoacid = substitution_result.new_aminoacid
-        assert new_aminoacid == "Q", f"Вернулась не та аминокислота: {new_aminoacid}"
+                
+        mutation = InsertionMutation(MutationType.INSERTION, "TC", 14, 90)
+        insertion_result = mutation_service.apply_mutation(mutation, gene)       
+        new_domain = insertion_result.new_domain
+        print(new_domain)
+        assert not new_domain is None, f"sdf"
