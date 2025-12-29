@@ -65,36 +65,6 @@ class BaseSequence:
     def full_sequence(self) -> str:
         """Полная нуклеотидная последовательность"""
         return ''.join(exon.sequence for exon in self.exons)
-    
-    @property
-    def coding_sequence(self) -> str:
-        """Полная нуклеотидная последовательность"""
-        return ''.join(exon.sequence for exon in self.exons)[self.utr3.length:self.utr5.length]
-        
-    def _translate_nucleotide_position(self, nucleotide_position: int) -> int:
-        """"Пересчет позиции из-за смещения некодируемой области"""
-        return nucleotide_position - 1 + self.utr5.length
-    
-    def find_exon_by_position(self, nucleotide_position: int) -> Optional[Exon]:
-        """Найти экзон по позиции нуклеотида"""
-        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
-        for exon in self.exons:
-            if exon.start_position <= nucleotide_position_in_base_sequence <= exon.end_position:
-                return exon
-        return None
-
-    def substitution_nucleotide_in_exon(self, nucleotide_position: int, nucleotide: str) -> None:
-        exon = self.find_exon_by_position(nucleotide_position)
-        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
-        sequence = list(exon.sequence)
-        sequence[nucleotide_position_in_base_sequence - exon.start_position] = nucleotide
-        exon.sequence = ''.join(sequence)
-
-    def get_codon_by_nucleotide(self, nucleotide_position: int) -> str:
-        """Получить кодон по номеру нуклеотида"""
-        nucleotide_position_in_base_sequence = self._translate_nucleotide_position(nucleotide_position)
-        index = (nucleotide_position_in_base_sequence // 3 ) * 3
-        return self.full_sequence[index:index + 3]
 
     def to_dict(self) -> Dict:
         return {
@@ -134,9 +104,6 @@ class Protein:
     def __post_init__(self):
         if self.length == 0:
             self.length = len(self.sequence)
-
-    def get_amino_acid(self, amino_acid_position: int) -> str:
-        return self.sequence[amino_acid_position]
 
     def to_dict(self) -> Dict:
         return {

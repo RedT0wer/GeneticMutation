@@ -1,7 +1,7 @@
 from typing import Dict, Type
 from dataclasses import dataclass
 
-from ..models.gene_models import Gene
+from ..models.gene_models import *
 from ..models.mutation_models import *
 from ..services.translation_service import TranslationService
 
@@ -12,16 +12,46 @@ class MutationStrategy:
     def execute(self, mutation: Mutation, gene: Gene) -> BaseMutationResult:
         raise NotImplementedError()
 
+    def _translate_nucleotide_position(self, nucleotide_position: int, utr5: UTR) -> int:
+        """"Пересчет позиции из-за смещения некодируемой области"""
+        return nucleotide_position - 1 + utr5.length
+
+    def _find_exon_by_position(self, nucleotide_position: int, gene: Gene) -> Optional[Exon]:
+        """Найти экзон по позиции нуклеотида"""
+        # Поиск экзона
+        for exon in gene.base_sequence.exons:
+            if exon.start_position <= nucleotide_position <= exon.end_position:
+                return exon
+        return None
+
+    def _get_codon_by_nucleotide(self, sequence: str, nucleotide_position: int) -> str:
+        """Получить кодон по номеру нуклеотида"""
+        index = (nucleotide_position // 3 ) * 3
+        return sequence[index:index + 3]
+    
 
 class SubstitutionStrategy(MutationStrategy):
     """Стратегия для замены нуклеотида"""
     
+    def _translate_position_in_exon(self, exon: Exon, nucleotide_position: int) -> int:
+        return nucleotide_position - exon.start_position
+
+    def _substitute_nucleotide_in_exon(self, exon: Exon, position_in_exon: int, new_nucleotide: str):
+        """Заменить нуклеотид в экзоне"""
+        sequence = list(exon.sequence)
+        sequence[position_in_exon] = new_nucleotide
+        exon.sequence = ''.join(sequence)
+    
     def execute(self, mutation: SubstitutionMutation, gene: Gene) -> BaseMutationResult:        
         new_nucleotide = mutation.new_nucleotide
-        position_nucleotide = mutation.position_nucleotide
+        nucleotide_position = mutation.position_nucleotide
 
-        gene.base_sequence.substitution_nucleotide_in_exon(position_nucleotide, new_nucleotide)
-        codon = gene.base_sequence.get_codon_by_nucleotide(position_nucleotide)
+        global_position = self._translate_nucleotide_position(nucleotide_position, gene.base_sequence.utr5)
+        exon = self._find_exon_by_position(global_position, gene)
+        position_in_exon = self._translate_position_in_exon(exon, global_position)
+        
+        self._substitute_nucleotide_in_exon(exon, position_in_exon, new_nucleotide)
+        codon = self._get_codon_by_nucleotide(gene.base_sequence.full_sequence, global_position)
 
         translation_service = TranslationService()
 
