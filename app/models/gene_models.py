@@ -53,6 +53,7 @@ class BaseSequence:
     exons: List[Exon]
     utr3: UTR
     utr5: UTR
+    full_sequence: str = ""
 
     def __post_init__(self):
         if self.length == 0:
@@ -61,10 +62,7 @@ class BaseSequence:
         # Сортируем экзоны по номеру
         self.exons.sort(key=lambda x: x.number)
 
-    @property
-    def full_sequence(self) -> str:
-        """Полная нуклеотидная последовательность"""
-        return ''.join(exon.sequence for exon in self.exons)
+        self.full_sequence = ''.join(exon.sequence for exon in self.exons)
 
     def to_dict(self) -> Dict:
         return {

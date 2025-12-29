@@ -1,6 +1,6 @@
 import pytest
 
-from app.models.mutation_models import InsertionMutation, MutationType, SubstitutionMutation
+from app.models.mutation_models import *
 from app.services.gene_service import GeneService
 from app.services.mutation_service import MutationService
 
@@ -75,8 +75,23 @@ class TestMutationServices:
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
                 
-        mutation = InsertionMutation(MutationType.INSERTION, "TC", 14, 90)
-        insertion_result = mutation_service.apply_mutation(mutation, gene)       
+        mutation = InsertionMutation(MutationType.INSERTION, "TC", 13, 90)
+        insertion_result = mutation_service.apply_mutation(mutation, gene) 
         new_domain = insertion_result.new_domain
-        print(new_domain)
+        print(insertion_result)
+        assert not new_domain is None, f"sdf"
+
+    @pytest.mark.deletion
+    def test_inserted_one(self):
+        gene_service = GeneService()
+        mutation_service = MutationService()
+
+        ncbi_id = "NM_003319"
+        protein_id = "Q8WZ42"
+        gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
+                
+        mutation = DeletionMutation(MutationType.DELETION, 1000, 1001)
+        deletion_result = mutation_service.apply_mutation(mutation, gene) 
+        new_domain = deletion_result.new_domain
+        print(deletion_result)
         assert not new_domain is None, f"sdf"

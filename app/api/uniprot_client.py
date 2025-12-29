@@ -52,7 +52,7 @@ class UniProtClient:
     @retry_on_failure(max_retries=3, delay=1.0)
     def _fetch_uniprot_dom(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
-        url = config.UNIPROT_REST_URL + identifier + ".json" + "?fields=ft_domain%2Cft_compbias"
+        url = config.UNIPROT_REST_URL + identifier + ".json" + "?fields=ft_domain%2Cft_region"
         
         response = get(url)
         if not response.ok:
