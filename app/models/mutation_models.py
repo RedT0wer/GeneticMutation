@@ -36,7 +36,7 @@ class DeletionMutation(Mutation):
 @dataclass
 class ExonDeletionMutation(Mutation):
     """Удаление экзона"""
-    number_exon: int
+    nucleotide_position: int
 
 @dataclass
 class BaseMutationResult:
