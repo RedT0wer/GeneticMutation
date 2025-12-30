@@ -5,68 +5,194 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Genetic Mutation Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Дополнительные стили для нового функционала */
+        .info-display {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .sequences-display {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .sequence-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .seq-tab {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .seq-tab.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .sequence-text {
+            display: none;
+        }
+        
+        .sequence-text.active {
+            display: block;
+        }
+        
+        .sequence-textarea {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            background: #f9f9f9;
+        }
+        
+        .exon-block.coding {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .exon-block.non-coding {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .exon-number {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .exon-length, .exon-phase {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .domain-block.connection {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            opacity: 0.7;
+        }
+        
+        .domain-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .domain-position, .domain-length {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .protein-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .demo-btn {
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .demo-btn:hover {
+            background: #5b4bd8;
+        }
+        
+        .exons-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>🧬 Genetic Mutation Analyzer</h1>
-            <p>Analyze mutations and their impact on protein structure</p>
+            <p>Visualize gene structure and protein domains</p>
         </header>
 
         <!-- Панель ввода данных -->
         <div class="input-panel">
             <div class="input-group">
                 <label for="gene_id">Gene ID:</label>
-                <input type="text" id="gene_id" placeholder="e.g., ENSG00000139618" value="ENSG00000139618">
-                <button onclick="loadGene()">Load Gene</button>
+                <input type="text" id="gene_id" placeholder="e.g., ENSG00000139618">
+                <button onclick="loadGene()">Build Gene</button>
             </div>
 
             <div class="input-group">
                 <label for="protein_id">Protein ID:</label>
-                <input type="text" id="protein_id" placeholder="e.g., P04637" value="P04637">
-                <button onclick="loadProtein()">Load Protein</button>
-            </div>
-        </div>
-
-        <!-- Панель мутаций -->
-        <div class="mutation-panel">
-            <h3>Mutation Controls</h3>
-            <div class="mutation-controls">
-                <select id="mutation_type">
-                    <option value="substitution">Substitution</option>
-                    <option value="deletion">Deletion</option>
-                    <option value="insertion">Insertion</option>
-                </select>
-                <input type="number" id="mutation_position" placeholder="Position" value="100">
-                <input type="text" id="mutation_sequence" placeholder="New sequence" value="A">
-                <button onclick="applyMutation()">Apply Mutation</button>
-                <button onclick="clearMutations()" class="secondary">Clear All</button>
+                <input type="text" id="protein_id" placeholder="e.g., P04637">
+                <button onclick="loadProtein()">Show Protein</button>
             </div>
         </div>
 
         <!-- Основное содержимое -->
         <div class="content">
+            <!-- Информация о гене будет добавлена скриптом -->
+            
             <!-- Секция экзонов -->
             <div class="section">
-                <h2>Exons</h2>
+                <h2>Exons Structure</h2>
                 <div id="exons-display" class="sequence-display">
-                    <div class="placeholder">No exons loaded. Click "Load Gene" to load data.</div>
+                    <div class="placeholder">No gene loaded. Enter Gene and Protein IDs and click "Build Gene".</div>
                 </div>
             </div>
 
+            <!-- Секция последовательностей будет добавлена скриптом -->
+            
             <!-- Секция доменов -->
             <div class="domains-section">
                 <div class="domain-column">
-                    <h2>Original Domains</h2>
+                    <h2>Protein Domains</h2>
                     <div id="original-domains" class="sequence-display">
-                        <div class="placeholder">No domains loaded. Click "Load Protein" to load data.</div>
-                    </div>
-                </div>
-
-                <div class="domain-column">
-                    <h2>Modified Domains</h2>
-                    <div id="modified-domains" class="sequence-display">
-                        <div class="placeholder">Apply mutation to see changes</div>
+                        <div class="placeholder">Build gene to see protein domains.</div>
                     </div>
                 </div>
             </div>
@@ -74,10 +200,62 @@
 
         <!-- Статус бар -->
         <div class="status-bar" id="status">
-            Ready to analyze mutations
+            Ready to analyze genes
+        </div>
+        
+        <!-- Легенда -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color coding"></div>
+                <span>Coding Exons</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color non-coding"></div>
+                <span>Non-coding/UTR Exons</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color connection"></div>
+                <span>Connection Regions</span>
+            </div>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <style>
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-color.coding {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .legend-color.non-coding {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .legend-color.connection {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+    </style>
 </body>
 </html>

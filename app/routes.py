@@ -1,5 +1,5 @@
 ﻿from flask import Blueprint, request, jsonify, render_template
-from .services import gene_service
+from .services.gene_service import GeneService
 from .services.mutation_service import MutationService
 from .models.mutation_models import (
     Mutation, MutationType, 
@@ -12,6 +12,7 @@ from .utils.validators import Validators
 api_bp = Blueprint('api', __name__)
 validators = Validators()
 mutation_service = MutationService()
+gene_service = GeneService()
 
 # Маршруты для работы с генами
 @api_bp.route('/gene/build', methods=['POST'])

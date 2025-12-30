@@ -18,99 +18,218 @@ function updateStatus(message, type = 'info') {
     }
 }
 
-// Загрузка гена
+// Загрузка гена из API
 async function loadGene() {
     const geneId = document.getElementById('gene_id').value.trim();
+    const proteinId = document.getElementById('protein_id').value.trim();
 
     if (!geneId) {
         updateStatus('Please enter a Gene ID', 'error');
         return;
     }
 
-    updateStatus('Loading gene data...', 'loading');
-
-    try {
-        const response = await fetch(`/api/genes/${geneId}?species=human`);
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to load gene');
-        }
-
-        currentGene = data;
-        displayExons(data.exons);
-        updateStatus(`Gene ${geneId} loaded successfully`, 'success');
-
-    } catch (error) {
-        updateStatus(`Error: ${error.message}`, 'error');
-        console.error('Gene loading error:', error);
-    }
-}
-
-// Загрузка белка
-async function loadProtein() {
-    const proteinId = document.getElementById('protein_id').value.trim();
-
     if (!proteinId) {
         updateStatus('Please enter a Protein ID', 'error');
         return;
     }
 
-    updateStatus('Loading protein data...', 'loading');
+    updateStatus('Building gene structure...', 'loading');
 
     try {
-        // В реальном приложении здесь будет вызов API
-        // Для демо создаем mock данные
-        const mockDomains = [
-            { name: 'DNA-binding', start: 100, end: 300, sequence: 'MOCKSEQ1' },
-            { name: 'Transactivation', start: 400, end: 500, sequence: 'MOCKSEQ2' },
-            { name: 'Tetramerization', start: 600, end: 700, sequence: 'MOCKSEQ3' }
-        ];
+        const response = await fetch('/api/gene/build', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                source: 'ensembl',
+                gene_id: geneId,
+                protein_id: proteinId
+            })
+        });
 
-        currentProtein = { domains: mockDomains };
-        displayDomains(mockDomains, 'original-domains');
-        updateStatus(`Protein ${proteinId} domains loaded`, 'success');
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to build gene structure');
+        }
+
+        if (!data.success) {
+            throw new Error('Failed to build gene structure');
+        }
+
+        currentGene = data.gene;
+        
+        // Отображаем данные гена
+        displayGeneData(currentGene);
+        
+        updateStatus(`Gene ${geneId} built successfully`, 'success');
 
     } catch (error) {
         updateStatus(`Error: ${error.message}`, 'error');
-        console.error('Protein loading error:', error);
+        console.error('Gene building error:', error);
     }
 }
 
-// Применение мутации
-function applyMutation() {
-    if (!currentGene && !currentProtein) {
-        updateStatus('Please load gene and protein data first', 'error');
+// Загрузка белка (теперь часть общего запроса гена)
+async function loadProtein() {
+    // Теперь белок загружается вместе с геном
+    const geneId = document.getElementById('gene_id').value.trim();
+    
+    if (!geneId) {
+        updateStatus('Please load gene first to get protein data', 'error');
         return;
     }
-
-    const type = document.getElementById('mutation_type').value;
-    const position = parseInt(document.getElementById('mutation_position').value);
-    const sequence = document.getElementById('mutation_sequence').value;
-
-    if (!position || position < 0) {
-        updateStatus('Please enter a valid position', 'error');
-        return;
+    
+    if (currentGene && currentGene.protein) {
+        displayProteinData(currentGene.protein);
+        updateStatus('Protein data displayed from gene', 'success');
+    } else {
+        updateStatus('Load gene first to get protein data', 'error');
     }
-
-    if ((type === 'substitution' || type === 'insertion') && !sequence) {
-        updateStatus('Please enter sequence for this mutation type', 'error');
-        return;
-    }
-
-    const mutation = { type, position, sequence, id: Date.now() };
-    mutations.push(mutation);
-
-    // Обновляем отображение
-    updateDisplayWithMutations();
-    updateStatus(`Applied ${type} mutation at position ${position}`, 'success');
 }
 
-// Очистка мутаций
-function clearMutations() {
-    mutations = [];
-    updateDisplayWithMutations();
-    updateStatus('All mutations cleared', 'success');
+// Отображение данных гена
+function displayGeneData(gene) {
+    if (!gene) {
+        console.error('No gene data provided');
+        return;
+    }
+
+    // 1. Отображаем экзоны
+    displayExons(gene.base_sequence.exons);
+    
+    // 2. Отображаем информацию о гене
+    displayGeneInfo(gene);
+    
+    // 3. Отображаем последовательности
+    displaySequences(gene);
+    
+    // 4. Отображаем белок (если есть)
+    if (gene.protein) {
+        displayProteinData(gene.protein);
+    }
+}
+
+// Отображение информации о гене
+function displayGeneInfo(gene) {
+    const infoContainer = document.getElementById('gene-info-display');
+    if (!infoContainer) {
+        // Создаем контейнер если его нет
+        const contentDiv = document.querySelector('.content');
+        const infoSection = document.createElement('div');
+        infoSection.className = 'section';
+        infoSection.id = 'gene-info-section';
+        infoSection.innerHTML = `
+            <h2>Gene Information</h2>
+            <div id="gene-info-display" class="info-display"></div>
+        `;
+        contentDiv.insertBefore(infoSection, contentDiv.firstChild);
+    }
+
+    const infoDiv = document.getElementById('gene-info-display');
+    const info = gene.base_sequence;
+    
+    let html = `
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Identifier:</span>
+                <span class="info-value">${info.identifier}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Length:</span>
+                <span class="info-value">${info.length} nucleotides</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Number of exons:</span>
+                <span class="info-value">${info.exons.length}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">5' UTR length:</span>
+                <span class="info-value">${info.utr5.length}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">3' UTR length:</span>
+                <span class="info-value">${info.utr3.length}</span>
+            </div>
+        </div>
+    `;
+    
+    infoDiv.innerHTML = html;
+}
+
+// Отображение последовательностей
+function displaySequences(gene) {
+    const sequencesContainer = document.getElementById('sequences-display');
+    if (!sequencesContainer) {
+        const contentDiv = document.querySelector('.content');
+        const sequenceSection = document.createElement('div');
+        sequenceSection.className = 'section';
+        sequenceSection.id = 'sequences-section';
+        sequenceSection.innerHTML = `
+            <h2>Sequences</h2>
+            <div id="sequences-display" class="sequences-display"></div>
+        `;
+        contentDiv.insertBefore(sequenceSection, document.querySelector('.domains-section'));
+    }
+
+    const seqDiv = document.getElementById('sequences-display');
+    const seq = gene.base_sequence;
+    
+    let html = `
+        <div class="sequence-tabs">
+            <button class="seq-tab active" onclick="showSequence('nucleotide-full')">Full Nucleotide</button>
+            <button class="seq-tab" onclick="showSequence('nucleotide-coding')">Coding Region</button>
+            <button class="seq-tab" onclick="showSequence('protein')">Protein</button>
+        </div>
+        <div class="sequence-content">
+            <div id="nucleotide-full" class="sequence-text active">
+                <h3>Full Nucleotide Sequence (${seq.length} bp)</h3>
+                <textarea readonly class="sequence-textarea">${seq.full_sequence || 'No sequence available'}</textarea>
+            </div>
+            <div id="nucleotide-coding" class="sequence-text">
+                <h3>Coding Region</h3>
+                <textarea readonly class="sequence-textarea">${getCodingSequence(seq) || 'No coding sequence available'}</textarea>
+            </div>
+            <div id="protein" class="sequence-text">
+                <h3>Protein Sequence</h3>
+                <textarea readonly class="sequence-textarea">${gene.protein?.sequence || 'No protein sequence available'}</textarea>
+            </div>
+        </div>
+    `;
+    
+    seqDiv.innerHTML = html;
+}
+
+// Получение кодирующей последовательности
+function getCodingSequence(seq) {
+    if (!seq.full_sequence || seq.utr5.end_position < 0 || seq.utr3.start_position < 0) {
+        return null;
+    }
+    const codingStart = seq.utr5.end_position + 1;
+    const codingEnd = seq.utr3.start_position - 1;
+    
+    if (codingStart >= 0 && codingEnd > codingStart) {
+        return seq.full_sequence.substring(codingStart, codingEnd + 1);
+    }
+    return null;
+}
+
+// Показ определенной последовательности
+function showSequence(sequenceId) {
+    // Убираем активный класс у всех табов
+    document.querySelectorAll('.seq-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Убираем активный класс у всех контентов
+    document.querySelectorAll('.sequence-text').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Активируем выбранный таб и контент
+    event.target.classList.add('active');
+    document.getElementById(sequenceId).classList.add('active');
 }
 
 // Отображение экзонов
@@ -122,22 +241,31 @@ function displayExons(exons) {
         return;
     }
 
-    let html = '<div class="exons-container">';
+    let html = `
+        <div class="exons-info">
+            <p>Total exons: ${exons.length}</p>
+        </div>
+        <div class="exons-container">
+    `;
 
     exons.forEach((exon, index) => {
-        const isModified = mutations.some(m =>
-            m.position >= exon.start_position && m.position <= exon.end_position
-        );
-
-        const isHighlighted = mutations.some(m => m.position === exon.start_position);
-
+        const length = exon.end_position - exon.start_position + 1;
+        const isCoding = exon.start_phase !== -1;
+        
         let className = 'exon-block';
-        if (isModified) className += ' modified';
-        if (isHighlighted) className += ' highlight';
-
+        if (isCoding) className += ' coding';
+        if (exon.start_phase === -1) className += ' non-coding';
+        
         html += `
-            <div class="${className}" title="Exon ${exon.number}: ${exon.start_position}-${exon.end_position}">
-                Exon ${exon.number}
+            <div class="${className}" 
+                 title="Exon ${exon.number}
+Start: ${exon.start_position}
+End: ${exon.end_position}
+Length: ${length} bp
+Phase: ${exon.start_phase !== -1 ? 'Start: ' + exon.start_phase + ', End: ' + exon.end_phase : 'Non-coding'}">
+                <div class="exon-number">${exon.number}</div>
+                <div class="exon-length">${length}bp</div>
+                ${isCoding ? '<div class="exon-phase">Phase: ' + exon.start_phase + '</div>' : '<div class="exon-phase">UTR</div>'}
             </div>
         `;
     });
@@ -146,32 +274,50 @@ function displayExons(exons) {
     container.innerHTML = html;
 }
 
-// Отображение доменов
-function displayDomains(domains, containerId) {
-    const container = document.getElementById(containerId);
+// Отображение данных белка
+function displayProteinData(protein) {
+    const container = document.getElementById('original-domains');
 
-    if (!domains || domains.length === 0) {
-        container.innerHTML = '<div class="placeholder">No domains data available</div>';
+    if (!protein || !protein.domains || protein.domains.length === 0) {
+        container.innerHTML = '<div class="placeholder">No protein domains available</div>';
         return;
+    }
+
+    // Создаем информацию о белке
+    const proteinInfo = document.getElementById('protein-info-display');
+    if (!proteinInfo) {
+        const domainsSection = document.querySelector('.domain-column:first-child');
+        const infoDiv = document.createElement('div');
+        infoDiv.id = 'protein-info-display';
+        infoDiv.className = 'info-display';
+        infoDiv.innerHTML = `
+            <div class="protein-info">
+                <p><strong>Protein ID:</strong> ${protein.identifier}</p>
+                <p><strong>Length:</strong> ${protein.length} amino acids</p>
+                <p><strong>Domains:</strong> ${protein.domains.length}</p>
+            </div>
+        `;
+        domainsSection.insertBefore(infoDiv, container);
     }
 
     let html = '<div class="domains-container">';
 
-    domains.forEach((domain, index) => {
-        const isModified = containerId === 'modified-domains' && mutations.length > 0;
-        const isChanged = isModified && mutations.some(m =>
-            m.position >= domain.start * 3 && m.position <= domain.end * 3
-        );
-
+    protein.domains.forEach((domain, index) => {
+        const length = domain.end - domain.start + 1;
+        const isConnection = domain.name === 'connection';
+        
         let className = 'domain-block';
-        if (isModified) className += ' modified';
-        if (isChanged) className += ' changed';
-
+        if (isConnection) className += ' connection';
+        
         html += `
             <div class="${className}" 
-                 data-positions="${domain.start}-${domain.end}"
-                 title="${domain.name}: ${domain.start}-${domain.end}">
-                ${domain.name}
+                 title="${domain.name}
+Position: ${domain.start}-${domain.end}
+Length: ${length} aa
+Type: ${domain.type}">
+                <div class="domain-name">${domain.name}</div>
+                <div class="domain-position">${domain.start}-${domain.end}</div>
+                <div class="domain-length">${length}aa</div>
             </div>
         `;
     });
@@ -180,68 +326,59 @@ function displayDomains(domains, containerId) {
     container.innerHTML = html;
 }
 
-// Обновление отображения с учетом мутаций
-function updateDisplayWithMutations() {
-    if (currentGene) {
-        displayExons(currentGene.exons);
-    }
-
-    if (currentProtein) {
-        displayDomains(currentProtein.domains, 'original-domains');
-
-        // Для модифицированных доменов создаем копию с изменениями
-        const modifiedDomains = currentProtein.domains.map(domain => ({
-            ...domain,
-            name: domain.name + (mutations.length > 0 ? ' (modified)' : '')
-        }));
-
-        displayDomains(modifiedDomains, 'modified-domains');
-    }
+// Применение мутации (оставлено для совместимости)
+function applyMutation() {
+    updateStatus('Mutation functionality requires gene and protein data', 'info');
+    // Реализация мутаций будет добавлена позже
 }
 
-// Mock данные для демонстрации
+// Очистка мутаций
+function clearMutations() {
+    mutations = [];
+    if (currentGene) {
+        displayGeneData(currentGene);
+    }
+    updateStatus('All mutations cleared', 'success');
+}
+
+// Загрузка демо данных
 function loadDemoData() {
-    // Mock экзоны
-    const mockExons = [
-        { number: 1, start_position: 0, end_position: 149, sequence: 'ATG...' },
-        { number: 2, start_position: 150, end_position: 299, sequence: 'GCT...' },
-        { number: 3, start_position: 300, end_position: 449, sequence: 'TAC...' },
-        { number: 4, start_position: 450, end_position: 599, sequence: 'GGA...' },
-        { number: 5, start_position: 600, end_position: 749, sequence: 'CTT...' }
-    ];
-
-    // Mock домены
-    const mockDomains = [
-        { name: 'DNA-binding', start: 100, end: 300, sequence: 'MOCKSEQ1' },
-        { name: 'Transactivation', start: 400, end: 500, sequence: 'MOCKSEQ2' },
-        { name: 'Tetramerization', start: 600, end: 700, sequence: 'MOCKSEQ3' }
-    ];
-
-    currentGene = { exons: mockExons };
-    currentProtein = { domains: mockDomains };
-
-    displayExons(mockExons);
-    displayDomains(mockDomains, 'original-domains');
-    displayDomains(mockDomains, 'modified-domains');
-
-    updateStatus('Demo data loaded. Try applying mutations!', 'success');
+    // Устанавливаем демо значения
+    document.getElementById('gene_id').value = 'ENST00000460472';
+    document.getElementById('protein_id').value = 'Q8WZ42';
+    
+    // Загружаем демо ген
+    loadGene();
 }
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function () {
-    updateStatus('Application ready. Load demo data or enter your own IDs.');
+    updateStatus('Application ready. Enter Gene and Protein IDs or load demo data.');
+    
+    // Добавляем кнопку загрузки демо данных
+    const inputPanel = document.querySelector('.input-panel');
+    const demoButton = document.createElement('button');
+    demoButton.textContent = 'Load Demo';
+    demoButton.onclick = loadDemoData;
+    demoButton.className = 'demo-btn';
+    demoButton.style.marginLeft = '10px';
+    demoButton.style.backgroundColor = '#6c5ce7';
+    
+    inputPanel.appendChild(demoButton);
 
-    // Автозагрузка демо данных для удобства
-    setTimeout(loadDemoData, 1000);
+    // Автозагрузка демо данных
+    setTimeout(() => {
+        if (!document.getElementById('gene_id').value) {
+            loadDemoData();
+        }
+    }, 500);
 });
 
 // Обработчики клавиш
 document.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
-        if (document.activeElement.id === 'gene_id') {
+        if (document.activeElement.id === 'gene_id' || document.activeElement.id === 'protein_id') {
             loadGene();
-        } else if (document.activeElement.id === 'protein_id') {
-            loadProtein();
         }
     }
 });
