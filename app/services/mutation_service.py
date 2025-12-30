@@ -34,8 +34,6 @@ class MutationStrategy:
     def _get_protein_domain_at_position(self, gene: Gene, nucleotide_position: int) -> List[ProteinDomain]:
         """Получить белковые домены по позиции нуклеотида"""
         aminoacid_position = nucleotide_position // 3
-        
-        # Проверяем домены в транслированном белке
         for domain in gene.translated_protein.domains:
             if domain.start <= aminoacid_position <= domain.end:
                 return domain
@@ -104,23 +102,11 @@ class SequenceMutationStrategy(MutationStrategy):
 class SubstitutionStrategy(MutationStrategy):
     """Стратегия для замены нуклеотида"""
     
-    def _translate_position_in_exon(self, exon: Exon, nucleotide_position: int) -> int:
-        """Перевести глобальную позицию в позицию внутри экзона"""
-        return nucleotide_position - exon.start_position
-
-    def _substitute_nucleotide_in_exon(self, exon: Exon, position_in_exon: int, new_nucleotide: str):
-        """Заменить нуклеотид в экзоне"""
-        sequence = list(exon.sequence)
-        sequence[position_in_exon] = new_nucleotide
-        exon.sequence = ''.join(sequence)
-        # Обновляем длину экзона
-        exon.length = len(exon.sequence)
-    
-    def _update_full_sequence(self, gene: Gene, global_position: int, new_nucleotide: str):
+    def _update_full_sequence(self, gene: Gene, global_position: int, new_nucleotide: str) -> str:
         """Обновить полную последовательность гена"""
         seq_list = list(gene.base_sequence.full_sequence)
         seq_list[global_position] = new_nucleotide
-        gene.base_sequence.full_sequence = ''.join(seq_list)
+        return ''.join(seq_list)
     
     def execute(self, mutation: SubstitutionMutation, gene: Gene) -> BaseMutationResult:        
         new_nucleotide = mutation.new_nucleotide
@@ -129,20 +115,11 @@ class SubstitutionStrategy(MutationStrategy):
         # Переводим позицию с учетом UTR5
         global_position = self._translate_nucleotide_position(nucleotide_position, gene.base_sequence.utr5)
         
-        # Находим экзон
-        exon = self._find_exon_by_position(global_position, gene)
-        if not exon:
-            raise ValueError(f"No exon found at position {global_position}")
-            
-        # Заменяем нуклеотид в экзоне
-        position_in_exon = self._translate_position_in_exon(exon, global_position)
-        self._substitute_nucleotide_in_exon(exon, position_in_exon, new_nucleotide)
-        
         # Обновляем полную последовательность
-        self._update_full_sequence(gene, global_position, new_nucleotide)
+        seq = self._update_full_sequence(gene, global_position, new_nucleotide)
         
         # Получаем новый кодон и аминокислоту
-        codon = self._get_codon_by_nucleotide(gene.base_sequence.full_sequence, global_position)
+        codon = self._get_codon_by_nucleotide(seq, global_position)
         new_aminoacid = self.translation_service.get_aminoacid(codon)
 
         return SubstitutionResult(new_aminoacid=new_aminoacid)

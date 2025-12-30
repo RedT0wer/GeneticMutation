@@ -76,21 +76,20 @@ class NCBIClient:
                     start, end = self._parse_location(location_str)
                     
                     # Получаем последовательность экзона
-                    exon_sequence = self._extract_exon_sequence(data, start, end)
+                    length = end - start + 1
                     
                     # Создаем объект экзона
                     exon = Exon(
                         number=exon_number,
-                        sequence=exon_sequence,
                         start_position=current_position,
-                        end_position=current_position + len(exon_sequence) - 1,
+                        end_position=current_position + length - 1,
                         start_phase=0,
                         end_phase=0,
-                        length=len(exon_sequence),
+                        length=length,
                     )
                     
                     exons.append(exon)
-                    current_position += len(exon_sequence)
+                    current_position += length
                     exon_number += 1
             
             return exons

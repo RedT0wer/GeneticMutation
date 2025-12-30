@@ -106,18 +106,14 @@ class EnsemblClient:
             # Вычисляем позиции в конкатенированной последовательности
             start_pos = current_position
             end_pos = current_position + int(exon_data.get("end")) - int(exon_data.get("start"))
-
-            # Получаем последовательность экзона
-            exon_sequence = self._extract_exon_sequence(start_pos, end_pos, exon_sequences)
             
             exon = Exon(
                 number=i,
-                sequence=exon_sequence,
                 start_position=start_pos,
                 end_position=end_pos,
                 start_phase=0,
                 end_phase=0,
-                length=len(exon_sequence),
+                length=end_pos - start_pos + 1,
             )
             
             exons.append(exon)

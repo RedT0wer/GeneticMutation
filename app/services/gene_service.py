@@ -38,7 +38,7 @@ class GeneService:
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
             # 4. Создание экзонов
-            exons = self._build_exons(raw_exons, sequence, utr5, utr3)
+            exons = self._build_exons(raw_exons, utr5, utr3)
             
             # 5. Создаём базовую последовательность
             base_sequence = BaseSequence(
@@ -46,7 +46,8 @@ class GeneService:
                 length=len(sequence),
                 exons=exons,
                 utr3=utr3,
-                utr5=utr5
+                utr5=utr5,
+                full_sequence=sequence
             )
             
             # 6. Получаем белок из UniProt
@@ -86,7 +87,7 @@ class GeneService:
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
             # 4. Создание экзонов
-            exons = self._build_exons(raw_exons, sequence, utr5, utr3)
+            exons = self._build_exons(raw_exons, utr5, utr3)
             
             # 5. Создаём базовую последовательность
             base_sequence = BaseSequence(
@@ -94,7 +95,8 @@ class GeneService:
                 length=len(sequence),
                 exons=exons,
                 utr3=utr3,
-                utr5=utr5
+                utr5=utr5,
+                full_sequence=sequence
             )
             
             # 6. Получаем белок из UniProt
@@ -145,7 +147,7 @@ class GeneService:
             logger.error(f"Error building protein {protein_id}: {e}")
             return None
     
-    def _build_exons(self, raw_exons: List[Tuple[int, int]], sequence: str, utr5: UTR, utr3: UTR) -> List[Exon]:
+    def _build_exons(self, raw_exons: List[Tuple[int, int]], utr5: UTR, utr3: UTR) -> List[Exon]:
         """
         Создание экзонов
         """
@@ -158,8 +160,7 @@ class GeneService:
             # Вычисляем позиции в конкатенированной последовательности
             start_pos,end_pos = exon_data
 
-            # Получаем последовательность экзона
-            exon_sequence = sequence[start_pos:end_pos+1]
+            length = end_pos - start_pos + 1
 
             # Считаем начало кодирующей области
             end_exons = False
@@ -168,24 +169,23 @@ class GeneService:
                 end_phase = -1
             elif start_pos <= utr5.end_position <= end_pos:
                 start_phase = utr5.length - start_pos + 1
-                end_phase = (len(exon_sequence) + 1 - start_phase) % 3
+                end_phase = (length + 1 - start_phase) % 3
             elif start_pos <= utr3.start_position <= end_pos:
                 start_phase = (3 - prev_end_phase) % 3
                 end_phase = end_pos - utr3.start_position
                 end_exons = True
             else:
                 start_phase = (3 - prev_end_phase) % 3
-                end_phase = (len(exon_sequence) - start_phase) % 3
+                end_phase = (length - start_phase) % 3
             prev_end_phase = end_phase
 
             exon = Exon(
                 number=i,
-                sequence=exon_sequence,
                 start_position=start_pos,
                 end_position=end_pos,
                 start_phase=start_phase,
                 end_phase=end_phase,
-                length=len(exon_sequence),
+                length=length,
             )
             
             exons.append(exon)

@@ -5,7 +5,6 @@ from typing import List, Optional, Dict, Any, Tuple
 class Exon:
     """Модель экзона"""
     number: int
-    sequence: str
     start_position: int
     end_position: int
     start_phase: int
@@ -14,14 +13,15 @@ class Exon:
     
     def __post_init__(self):
         if self.length == 0:
-            self.length = len(self.sequence)
+            self.length = self.end_position - self.start_position + 1
     
     def to_dict(self) -> Dict:
         return {
             'number': self.number,
-            'sequence': self.sequence,
             'start_position': self.start_position,
             'end_position': self.end_position,
+            'start_phase': self.start_phase,
+            'end_phase': self.end_phase,
             'length': self.length,
         }
 
@@ -53,16 +53,11 @@ class BaseSequence:
     exons: List[Exon]
     utr3: UTR
     utr5: UTR
-    full_sequence: str = ""
+    full_sequence: str
 
     def __post_init__(self):
         if self.length == 0:
             self.length = sum([exon.length for exon in self.exons])
-
-        # Сортируем экзоны по номеру
-        self.exons.sort(key=lambda x: x.number)
-
-        self.full_sequence = ''.join(exon.sequence for exon in self.exons)
 
     def to_dict(self) -> Dict:
         return {
