@@ -168,8 +168,8 @@ class GeneService:
                 start_phase = -1
                 end_phase = -1
             elif start_pos <= utr5.end_position <= end_pos:
-                start_phase = utr5.length - start_pos + 1
-                end_phase = (length + 1 - start_phase) % 3
+                start_phase = utr5.length - start_pos
+                end_phase = (length - start_phase) % 3
             elif start_pos <= utr3.start_position <= end_pos:
                 start_phase = (3 - prev_end_phase) % 3
                 end_phase = end_pos - utr3.start_position

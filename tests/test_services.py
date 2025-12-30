@@ -74,12 +74,12 @@ class TestMutationServices:
         ncbi_id = "NM_003319"
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-                
-        mutation = InsertionMutation(MutationType.INSERTION, "TC", 13, 90)
+
+        mutation = InsertionMutation(MutationType.INSERTION, "T", 15, 90)
         insertion_result = mutation_service.apply_mutation(mutation, gene) 
         new_domain = insertion_result.new_domain
-        print(insertion_result)
-        assert not new_domain is None, f"sdf"
+
+        assert new_domain.sequence.find("SDVYAAVTKRCGTGG*") != -1, f"Мутация вернулся не та: {new_domain.sequence}"
 
     @pytest.mark.deletion
     def test_deletion_one(self):

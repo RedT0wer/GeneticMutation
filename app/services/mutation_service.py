@@ -42,7 +42,7 @@ class MutationStrategy:
 class SequenceMutationStrategy(MutationStrategy):
     """Базовый класс для стратегий, работающих с последовательностями"""
     
-    def _calculate_protein_result(self, original_sequence: str, mutated_sequence: str,
+    def _calculate_protein_result(self, mutated_sequence: str,
                                 mutation_position: int, protein_domain: ProteinDomain, 
                                 utr5: UTR, gene: Gene) -> Tuple[ProteinDomain, int, int]:
         """Рассчитать результат мутации для домена белка"""
@@ -60,12 +60,12 @@ class SequenceMutationStrategy(MutationStrategy):
         
         # Стартовая позиция трансляции - либо начало домена, либо начало экзона (что раньше)
         translation_start = max(domain_start_nucleotide, exon_with_mutation.start_position + exon_with_mutation.start_phase)
-        
+
         # Транслируем до стоп-кодона или конца
         translated_result = self.translation_service.translation_sequence(
             mutated_sequence, 
             translation_start, 
-            len(mutated_sequence) - 1
+            (len(mutated_sequence) - translation_start) // 3 * 3 - 1
         )
         
         # Находим стоп-кодон в транслированной последовательности
@@ -73,7 +73,6 @@ class SequenceMutationStrategy(MutationStrategy):
             stop_codon_pos = -1
         else:
             stop_codon_pos = translation_start + (len(translated_result) - 1) * 3
-        print(mutated_sequence[translation_start:stop_codon_pos+3])
 
         # Находим позицию, с которой началась мутация
         diff_pos = (translation_start - gene.base_sequence.utr5.length) // 3
@@ -102,9 +101,9 @@ class SequenceMutationStrategy(MutationStrategy):
 class SubstitutionStrategy(MutationStrategy):
     """Стратегия для замены нуклеотида"""
     
-    def _update_full_sequence(self, gene: Gene, global_position: int, new_nucleotide: str) -> str:
+    def _update_full_sequence(self, original_sequence: str, global_position: int, new_nucleotide: str) -> str:
         """Обновить полную последовательность гена"""
-        seq_list = list(gene.base_sequence.full_sequence)
+        seq_list = list(original_sequence)
         seq_list[global_position] = new_nucleotide
         return ''.join(seq_list)
     
@@ -115,11 +114,14 @@ class SubstitutionStrategy(MutationStrategy):
         # Переводим позицию с учетом UTR5
         global_position = self._translate_nucleotide_position(nucleotide_position, gene.base_sequence.utr5)
         
-        # Обновляем полную последовательность
-        seq = self._update_full_sequence(gene, global_position, new_nucleotide)
+        # Строим мутированную последовательность
+        original_sequence = gene.base_sequence.full_sequence
+        mutated_sequence = self._update_full_sequence(
+            original_sequence, global_position, new_nucleotide
+        )
         
         # Получаем новый кодон и аминокислоту
-        codon = self._get_codon_by_nucleotide(seq, global_position)
+        codon = self._get_codon_by_nucleotide(mutated_sequence, global_position)
         new_aminoacid = self.translation_service.get_aminoacid(codon)
 
         return SubstitutionResult(new_aminoacid=new_aminoacid)
@@ -146,15 +148,11 @@ class InsertionStrategy(SequenceMutationStrategy):
             original_sequence, global_position, inserted_sequence
         )
         
-        # Обновляем полную последовательность гена
-        #self._update_gene_sequences(gene, mutated_sequence)
-        
         # Получаем затронутый белковый домен
         protein_domain = self._get_protein_domain_at_position(gene, start_position)
         
         # Для затронутого домена строим результат
         new_domain, diff_pos, stop_codon = self._calculate_protein_result(
-            original_sequence,
             mutated_sequence,
             start_position,
             protein_domain,
