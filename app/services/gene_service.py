@@ -220,7 +220,7 @@ class GeneService:
         utr3_seq = sequence[-utr3_start:] if utr3_start > 0 else ""
         utr3 = UTR(
             sequence=utr3_seq,
-            start_position=len(sequence) - 1 - utr3_start if utr3_start > 0 else -1,
+            start_position=len(sequence) - utr3_start if utr3_start > 0 else -1,
             end_position=len(sequence) - 1,
             length=len(utr3_seq)
         )

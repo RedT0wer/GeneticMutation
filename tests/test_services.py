@@ -1,4 +1,5 @@
 import pytest
+import time
 
 from app.models.mutation_models import *
 from app.services.gene_service import GeneService
@@ -75,22 +76,21 @@ class TestMutationServices:
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
 
-        mutation = InsertionMutation(MutationType.INSERTION, "T", 15, 90)
+        mutation = InsertionMutation(MutationType.INSERTION, "T", 1500, 90)
         insertion_result = mutation_service.apply_mutation(mutation, gene) 
         new_domain = insertion_result.new_domain
-
-        assert new_domain.sequence.find("SDVYAAVTKRCGTGG*") != -1, f"Мутация вернулся не та: {new_domain.sequence}"
+        print(insertion_result)
+        assert new_domain.sequence.find("YKARADARNS*") != -1, f"Вернулся не та мутация: {new_domain.sequence}"
 
     @pytest.mark.deletion
     def test_deletion_one(self):
         gene_service = GeneService()
         mutation_service = MutationService()
-
         ncbi_id = "NM_003319"
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-                
-        mutation = DeletionMutation(MutationType.DELETION, 1000, 1001)
+
+        mutation = DeletionMutation(MutationType.DELETION, 1, 3)
         deletion_result = mutation_service.apply_mutation(mutation, gene) 
         new_domain = deletion_result.new_domain
         print(deletion_result)
@@ -104,8 +104,8 @@ class TestMutationServices:
         ncbi_id = "NM_003319"
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-                
-        mutation = ExonDeletionMutation(MutationType.EXON_DELETION, 1)
+
+        mutation = ExonDeletionMutation(MutationType.EXON_DELETION, 600)
         exon_deletion_result = mutation_service.apply_mutation(mutation, gene) 
         print(exon_deletion_result)
         assert not exon_deletion_result is None, f"sdf"
