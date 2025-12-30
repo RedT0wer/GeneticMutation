@@ -346,9 +346,6 @@ function loadDemoData() {
     // Устанавливаем демо значения
     document.getElementById('gene_id').value = 'ENST00000460472';
     document.getElementById('protein_id').value = 'Q8WZ42';
-    
-    // Загружаем демо ген
-    loadGene();
 }
 
 // Инициализация при загрузке страницы
@@ -357,28 +354,9 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Добавляем кнопку загрузки демо данных
     const inputPanel = document.querySelector('.input-panel');
-    const demoButton = document.createElement('button');
-    demoButton.textContent = 'Load Demo';
-    demoButton.onclick = loadDemoData;
-    demoButton.className = 'demo-btn';
-    demoButton.style.marginLeft = '10px';
-    demoButton.style.backgroundColor = '#6c5ce7';
-    
-    inputPanel.appendChild(demoButton);
 
     // Автозагрузка демо данных
     setTimeout(() => {
-        if (!document.getElementById('gene_id').value) {
-            loadDemoData();
-        }
+        loadDemoData();
     }, 500);
-});
-
-// Обработчики клавиш
-document.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        if (document.activeElement.id === 'gene_id' || document.activeElement.id === 'protein_id') {
-            loadGene();
-        }
-    }
 });
