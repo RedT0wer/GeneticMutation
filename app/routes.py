@@ -207,21 +207,6 @@ def _gene_to_dict(gene):
                 for domain in gene.protein.domains
             ]
         },
-        'translated_protein': {
-            'identifier': gene.translated_protein.identifier,
-            'sequence': gene.translated_protein.sequence,
-            'length': gene.translated_protein.length,
-            'domains': [
-                {
-                    'name': domain.name,
-                    'start': domain.start,
-                    'end': domain.end,
-                    'sequence': domain.sequence,
-                    'type': domain.type
-                }
-                for domain in gene.translated_protein.domains
-            ]
-        },
         'base_sequence': {
             'identifier': gene.base_sequence.identifier,
             'length': gene.base_sequence.length,
@@ -357,29 +342,3 @@ def health_check():
         'service': 'Gene Mutation API',
         'version': '1.0.0'
     }), 200
-
-@api_bp.route('/gene/example', methods=['GET'])
-def get_example_gene():
-    """Получить пример структуры гена (для тестирования)"""
-    # Здесь можно вернуть пример заранее подготовленных данных
-    example_data = {
-        "example_gene": {
-            "id": "ENSG00000139618",
-            "protein_id": "P04637",
-            "description": "TP53 tumor suppressor gene"
-        },
-        "example_mutations": [
-            {
-                "mutation_type": "substitution",
-                "position_nucleotide": 100,
-                "new_nucleotide": "T"
-            },
-            {
-                "mutation_type": "insertion",
-                "start_position": 150,
-                "end_position": 155,
-                "inserted_sequence": "ATCGAT"
-            }
-        ]
-    }
-    return jsonify(example_data), 200

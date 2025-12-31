@@ -110,7 +110,6 @@ class Protein:
 class Gene:
     """Модель гена"""
     protein: Protein
-    translated_protein: Protein
     base_sequence: BaseSequence
 
     def to_dict(self) -> Dict:

@@ -58,8 +58,7 @@ class GeneService:
             
             # 8. Создаём ген
             gene = Gene(
-                protein=protein,
-                translated_protein=translated_protein,
+                protein=translated_protein,
                 base_sequence=base_sequence
             )
             
@@ -107,8 +106,7 @@ class GeneService:
             
             # 8. Создаём ген
             gene = Gene(
-                protein=protein,
-                translated_protein=translated_protein,
+                protein=translated_protein,
                 base_sequence=base_sequence
             )
             

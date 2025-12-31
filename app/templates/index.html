@@ -1,260 +1,153 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Mutation Analyzer</title>
+    <title>Gene Structure Visualizer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        /* Дополнительные стили для нового функционала */
-        .info-display {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-        }
-        
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #666;
-        }
-        
-        .info-value {
-            color: #333;
-        }
-        
-        .sequences-display {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .sequence-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        .seq-tab {
-            padding: 8px 16px;
-            background: #f5f5f5;
-            border: none;
-            border-radius: 6px 6px 0 0;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .seq-tab.active {
-            background: #3498db;
-            color: white;
-        }
-        
-        .sequence-text {
-            display: none;
-        }
-        
-        .sequence-text.active {
-            display: block;
-        }
-        
-        .sequence-textarea {
-            width: 100%;
-            height: 200px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            resize: vertical;
-            background: #f9f9f9;
-        }
-        
-        .exon-block.coding {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .exon-block.non-coding {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-        
-        .exon-number {
-            font-size: 16px;
-            font-weight: bold;
-        }
-        
-        .exon-length, .exon-phase {
-            font-size: 11px;
-            opacity: 0.9;
-        }
-        
-        .domain-block.connection {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            opacity: 0.7;
-        }
-        
-        .domain-name {
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .domain-position, .domain-length {
-            font-size: 11px;
-            opacity: 0.9;
-        }
-        
-        .protein-info {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-        
-        .demo-btn {
-            background: #6c5ce7;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        .demo-btn:hover {
-            background: #5b4bd8;
-        }
-        
-        .exons-info {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
+        <!-- Заголовок -->
         <header class="header">
-            <h1>🧬 Genetic Mutation Analyzer</h1>
-            <p>Visualize gene structure and protein domains</p>
+            <h1><i class="fas fa-dna"></i> Gene Structure Visualizer</h1>
         </header>
 
-        <!-- Панель ввода данных -->
-        <div class="input-panel">
-            <div class="input-group">
-                <label for="gene_id">Gene ID:</label>
-                <input type="text" id="gene_id" placeholder="e.g., ENSG00000139618">
+        <!-- Форма построения гена -->
+        <section class="build-section">
+            <h2><i class="fas fa-wrench"></i> Построить ген</h2>
+            <div class="build-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="source">Источник данных:</label>
+                        <select id="source" class="form-control">
+                            <option value="ensembl">Ensembl</option>
+                            <option value="ncbi">NCBI</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="geneId">ID гена:</label>
+                        <input type="text" id="geneId" class="form-control" placeholder="Например: ENSG00000141510">
+                    </div>
+                    <div class="form-group">
+                        <label for="proteinId">ID белка:</label>
+                        <input type="text" id="proteinId" class="form-control" placeholder="Например: P04637">
+                    </div>
+                    <div class="form-group">
+                    <label for="geneId">Построить ген</label>
+                        <button id="buildGeneBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Построить ген
+                        </button>
+                    </div>
+                </div>
+                <div id="buildStatus" class="status-message"></div>
             </div>
-
-            <div class="input-group">
-                <label for="protein_id">Protein ID:</label>
-                <input type="text" id="protein_id" placeholder="e.g., Q8WZ42">
-            </div>
-            <button onclick="loadGene()">Build Gene</button>
-        </div>
+        </section>
 
         <!-- Основное содержимое -->
-        <div class="content">
-            <!-- Информация о гене будет добавлена скриптом -->
-            
-            <!-- Секция экзонов -->
-            <div class="section">
-                <h2>Exons Structure</h2>
-                <div id="exons-display" class="sequence-display">
-                    <div class="placeholder">No gene loaded. Enter Gene and Protein IDs and click "Build Gene".</div>
+        <main class="main-content" id="geneContent" style="display: none;">
+            <!-- Панель информации -->
+            <div class="info-panel">
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> Информация о гене</h3>
+                    <div id="geneInfo">
+                        <!-- Будет заполнено через JavaScript -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Секция последовательностей будет добавлена скриптом -->
+            <!-- Визуализация структуры гена -->
+            <div class="structure-container">
+                <!-- Экзоны - левая колонка -->
+                <div class="structure-section exons-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-code"></i> Экзоны</h3>
+                        <div class="section-stats">
+                            <span class="stat-badge" id="exonCount">0 экзонов</span>
+                        </div>
+                    </div>
+                    <div id="exonsContainer" class="structure-list">
+                        <!-- Экзоны будут вставлены через JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Домены - правая колонка -->
+                <div class="structure-section domains-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-shapes"></i> Домены белка</h3>
+                        <div class="section-stats">
+                            <span class="stat-badge" id="domainCount">0 доменов</span>
+                        </div>
+                    </div>
+                    <div id="domainsContainer" class="structure-list">
+                        <!-- Домены будут вставлены через JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Сообщения об ошибках -->
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <!-- Шаблоны -->
+    <!-- Шаблон экзона -->
+    <script type="text/template" id="exonTemplate">
+        <div class="exon-card" data-exon-number="<%= number %>">
+            <div class="exon-header">
+                <h4><i class="fas fa-layer-group"></i> Экзон <%= number %></h4>
+                <div class="exon-meta">
+                    <span class="badge">ID: <%= identifier %></span>
+                    <span class="position-badge">Позиция: <%= start_position+1 %>-<%= end_position+1 %></span>
+                    <span class="position-badge">Начальная фаза: <%= start_phase %></span>
+                    <span class="position-badge">Конечная фаза: <%= end_phase %></span>
+                </div>
+            </div>
             
-            <!-- Секция доменов -->
-            <div class="domains-section">
-                <div class="domain-column">
-                    <h2>Protein Domains</h2>
-                    <div id="original-domains" class="sequence-display">
-                        <div class="placeholder">Build gene to see protein domains.</div>
+            <div class="exon-content">                
+                <!-- Последовательность -->
+                <div class="sequence-block">
+                    <div class="sequence-header">
+                        <span class="sequence-label"><i class="fas fa-dna"></i> Нуклеотидная последовательность:</span>
+                        <span class="sequence-length">(<%= length %> нт)</span>
+                    </div>
+                    <div class="sequence-content">
+                        <%= sequence %>
                     </div>
                 </div>
             </div>
         </div>
+    </script>
 
-        <!-- Статус бар -->
-        <div class="status-bar" id="status">
-            Ready to analyze genes
+    <!-- Шаблон домена -->
+    <script type="text/template" id="domainTemplate">
+        <div class="domain-card" data-domain-name="<%= name %>">
+            <div class="domain-header">
+                <h4><i class="fas fa-shapes"></i> <%= name %></h4>
+                <div class="domain-meta">
+                    <span class="badge badge-<%= type || 'unknown' %>"><%= type || 'Не указан' %></span>
+                    <span class="position-badge">Позиция в белке: <%= start+1 %>-<%= end+1 %></span>
+                </div>
+            </div>
+            
+            <div class="domain-content">                
+                <!-- Последовательность -->
+                <div class="sequence-block">
+                    <div class="sequence-header">
+                        <span class="sequence-label"><i class="fas fa-helix"></i> Аминокислотная последовательность:</span>
+                        <span class="sequence-length">(<%= end - start + 1 %> а.к.)</span>
+                    </div>
+                    <div class="sequence-content">
+                        <%= sequence %>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Легенда -->
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color coding"></div>
-                <span>Coding Exons</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color non-coding"></div>
-                <span>Non-coding/UTR Exons</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color connection"></div>
-                <span>Connection Regions</span>
-            </div>
-        </div>
-    </div>
+    </script>
 
+    <!-- JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    
-    <style>
-        .legend {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 20px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-        }
-        
-        .legend-color.coding {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .legend-color.non-coding {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        
-        .legend-color.connection {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        }
-    </style>
 </body>
 </html>
