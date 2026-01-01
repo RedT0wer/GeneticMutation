@@ -426,6 +426,10 @@ select.form-control {
     overflow-y: auto;
 }
 
+.utr {
+    color: red;
+}
+
 /* Визуализация */
 .visual-block {
     background: white;
