@@ -98,7 +98,9 @@
             <div class="exon-header">
                 <div class="exon-meta">
                     <span class="badge">Экзон <%= number %></span>
-                    <span class="position-badge">Позиция: <%= start_position+1 %>-<%= end_position+1 %></span>
+                    <% if (start_phase != -1 && end_phase != -1) { %>
+                        <span class="position-badge">Позиция: <%= (start_position + 1 - utr5 > 1) ? (start_position + 1 - utr5) : 1 %>-<%= (end_position+1-utr5 <= utr3) ? end_position+1-utr5 : utr3-utr5 %></span>
+                    <% } %>
                     <span class="position-badge">Начальная фаза: <%= start_phase %></span>
                     <span class="position-badge">Конечная фаза: <%= end_phase %></span>
                 </div>
@@ -106,7 +108,17 @@
             
             <!-- Последовательность -->
             <div class="sequence-content">
-                <span class="utr"><%= sequence %></span>
+                <% sequence_parts.forEach(function(part) { %>
+                    <% if (part.type === 'utr') { %>
+                        <span class="utr" title="UTR область">
+                            <%= part.sequence %>
+                        </span>
+                    <% } else { %>
+                        <span title="Кодирующая область">
+                            <%= part.sequence %>
+                        </span>
+                    <% } %>
+                <% }); %>
             </div>
         </div>
     </script>
@@ -117,7 +129,7 @@
             <div class="domain-header">
                 <div class="domain-meta">
                     <span class="badge badge-domain"><%= name %></span>
-                    <% if (type !== "unknown") { %>
+                    <% if (type != "unknown") { %>
                         <span class="position-badge"><%= type %></span>
                     <% } %>
                     <span class="position-badge">Позиция в белке: <%= start+1 %>-<%= end+1 %></span>
@@ -126,7 +138,7 @@
 
             <!-- Последовательность -->
             <div class="sequence-content">
-                <span class="utr"><%= sequence %></span>
+                <span><%= sequence %></span>
             </div>
         </div>
     </script>

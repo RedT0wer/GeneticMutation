@@ -70,24 +70,102 @@ function displayGeneInfo(gene) {
     `;
 }
 
-// Отображение экзонов
 function displayExons(exons, totalLength) {
     const container = document.getElementById('exonsContainer');
     const countEl = document.getElementById('exonCount');
     const full_sequence = currentGene.base_sequence.full_sequence;
-    //console.log(exon.start_position, exon.end_position, sequence);
+    
+    // Получаем UTR области из base_sequence
+    const utr5 = currentGene.base_sequence.utr5;
+    const utr3 = currentGene.base_sequence.utr3;
     
     container.innerHTML = '';
     
     exons.forEach(exon => {
-        // Генерируем последовательность для экзона
-        sequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
+        // Получаем полную последовательность экзона
+        const exonSequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
+        
+        // Определяем, какие части экзона относятся к UTR
+        let sequenceParts = [];
+        
+        // Проверяем пересечение с 5' UTR
+        if (utr5 && exon.end_position >= utr5.start_position && exon.start_position <= utr5.end_position) {
+            const utrStart = Math.max(exon.start_position, utr5.start_position);
+            const utrEnd = Math.min(exon.end_position, utr5.end_position);
+            const utrPart = full_sequence.slice(utrStart, utrEnd + 1);
+            sequenceParts.push({
+                type: 'utr',
+                sequence: utrPart,
+                start: utrStart - exon.start_position,
+                end: utrEnd - exon.start_position
+            });
+        }
+        
+        // Проверяем пересечение с 3' UTR
+        if (utr3 && exon.end_position >= utr3.start_position && exon.start_position <= utr3.end_position) {
+            const utrStart = Math.max(exon.start_position, utr3.start_position);
+            const utrEnd = Math.min(exon.end_position, utr3.end_position);
+            const utrPart = full_sequence.slice(utrStart, utrEnd + 1);
+            sequenceParts.push({
+                type: 'utr',
+                sequence: utrPart,
+                start: utrStart - exon.start_position,
+                end: utrEnd - exon.start_position
+            });
+        }
+        
+        // Определяем кодирующие части (не UTR)
+        let codingParts = [];
+        let lastEnd = 0;
+        
+        // Сортируем UTR части по позиции
+        sequenceParts.sort((a, b) => a.start - b.start);
+        
+        sequenceParts.forEach((part, index) => {
+            // Добавляем кодирующую часть перед текущим UTR
+            if (part.start > lastEnd) {
+                codingParts.push({
+                    type: 'coding',
+                    sequence: exonSequence.slice(lastEnd, part.start),
+                    start: lastEnd,
+                    end: part.start - 1
+                });
+            }
+            
+            lastEnd = part.end + 1;
+            
+            // Добавляем кодирующую часть после последнего UTR
+            if (index === sequenceParts.length - 1 && lastEnd < exonSequence.length) {
+                codingParts.push({
+                    type: 'coding',
+                    sequence: exonSequence.slice(lastEnd),
+                    start: lastEnd,
+                    end: exonSequence.length - 1
+                });
+            }
+        });
+        
+        // Если нет UTR частей, весь экзон - кодирующий
+        if (sequenceParts.length === 0) {
+            codingParts.push({
+                type: 'coding',
+                sequence: exonSequence,
+                start: 0,
+                end: exonSequence.length - 1
+            });
+        }
+        
+        // Объединяем все части в правильном порядке
+        const allParts = [...sequenceParts, ...codingParts].sort((a, b) => a.start - b.start);
         
         const exonData = {
             ...exon,
             total_length: totalLength,
             identifier: currentGene.base_sequence.identifier,
-            sequence: sequence
+            sequence: exonSequence,
+            utr5: utr5.length,
+            utr3: utr3.start_position,
+            sequence_parts: allParts
         };
         
         const html = compileTemplate('exonTemplate', exonData);
