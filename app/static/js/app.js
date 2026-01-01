@@ -43,24 +43,12 @@ function displayGeneInfo(gene) {
     geneInfoEl.innerHTML = `
         <div class="gene-info-grid">
             <div class="info-item-gene">
-                <span class="info-label"><i class="fas fa-tag"></i> Идентификатор белка:</span>
-                <span class="info-value">${gene.protein.identifier}</span>
-            </div>
-            <div class="info-item-gene">
-                <span class="info-label"><i class="fas fa-ruler"></i> Длина белка:</span>
-                <span class="info-value">${gene.protein.length} аминокислот</span>
-            </div>
-            <div class="info-item-gene">
                 <span class="info-label"><i class="fas fa-shapes"></i> Количество доменов:</span>
                 <span class="info-value">${gene.protein.domains.length}</span>
             </div>
             <div class="info-item-gene">
                 <span class="info-label"><i class="fas fa-layer-group"></i> Количество экзонов:</span>
                 <span class="info-value">${gene.base_sequence.exons.length}</span>
-            </div>
-            <div class="info-item-gene">
-                <span class="info-label"><i class="fas fa-dna"></i> Общая длина последовательности:</span>
-                <span class="info-value">${gene.base_sequence.length} нуклеотидов</span>
             </div>
             <div class="info-item-gene">
                 <span class="info-label"><i class="fas fa-code"></i> Длина всех экзонов:</span>
@@ -72,11 +60,11 @@ function displayGeneInfo(gene) {
             </div>
             <div class="info-item-gene">
                 <span class="info-label"><i class="fas fa-file-code"></i> Последовательность 5' UTR:</span>
-                <span class="info-value">${gene.base_sequence.utr5.length} нт</span>
+                <span class="info-value">${gene.base_sequence.utr5.length}</span>
             </div>
             <div class="info-item-gene">
                 <span class="info-label"><i class="fas fa-file-code"></i> Последовательность 3' UTR:</span>
-                <span class="info-value">${gene.base_sequence.utr3.length} нт</span>
+                <span class="info-value">${gene.base_sequence.utr3.length}</span>
             </div>
         </div>
     `;
