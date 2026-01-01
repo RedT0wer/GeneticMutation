@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gene Structure Visualizer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mutation.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -13,6 +14,147 @@
         <header class="header">
             <h1><i class="fas fa-dna"></i> Gene Structure Visualizer</h1>
         </header>
+
+        <!-- Кнопка открытия меню мутаций -->
+        <div class="mutation-menu-btn">
+            <button id="mutationMenuToggle" class="mutation-toggle-btn">
+                <i class="fas fa-biohazard"></i> Мутации
+            </button>
+        </div>
+
+        <!-- Меню мутаций -->
+        <div id="mutationMenu" class="mutation-menu">
+            <div class="mutation-menu-header">
+                <h3><i class="fas fa-dna"></i> Меню мутаций</h3>
+                <button id="closeMutationMenu" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+    
+            <div class="mutation-menu-content">
+                <!-- Выбор типа мутации -->
+                <div class="mutation-section">
+                    <h4><i class="fas fa-filter"></i> Тип мутации</h4>
+                    <div class="mutation-type-selector">
+                        <div class="mutation-type-option active" data-type="find">
+                            <i class="fas fa-search"></i>
+                            <span>Поиск</span>
+                        </div>
+                        <div class="mutation-type-option" data-type="substitution">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Замена</span>
+                        </div>
+                        <div class="mutation-type-option" data-type="insertion">
+                            <i class="fas fa-plus"></i>
+                            <span>Вставка</span>
+                        </div>
+                        <div class="mutation-type-option" data-type="deletion">
+                            <i class="fas fa-minus"></i>
+                            <span>Удаление</span>
+                        </div>
+                        <div class="mutation-type-option" data-type="exon_deletion">
+                            <i class="fas fa-trash-alt"></i>
+                            <span>Удаление экзона</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Параметры мутации -->
+                <div class="mutation-section">
+                    <h4 id="mutationParamsTitle"><i class="fas fa-sliders-h"></i> Параметры мутации</h4>
+    
+                    <!-- Основное поле для позиции -->
+                    <div class="mutation-param" id="positionParam">
+                        <label id="positionLabel">
+                            <i class="fas fa-map-marker-alt"></i> Позиция (нуклеотид):
+                        </label>
+                        <input type="number" id="mutationPosition" 
+                                class="mutation-input" 
+                                placeholder="Введите позицию"
+                                min="1">
+                    </div>
+    
+                    <!-- Поле для новой последовательности (для замены и вставки) -->
+                    <div class="mutation-param" id="sequenceParam">
+                        <label for="mutationSequence">
+                            <i class="fas fa-code"></i> Новая последовательность:
+                        </label>
+                        <input type="text" id="mutationSequence" 
+                                class="mutation-input" 
+                                placeholder="Например: ATCG"
+                                maxlength="20">
+                    </div>
+    
+                    <!-- Поле для диапазона (для удаления) -->
+                    <div class="mutation-param" id="rangeParam">
+                        <label for="mutationStart">Начальная позиция:</label>
+                        <input type="number" id="mutationStart" 
+                                class="mutation-input" 
+                                placeholder="Начало"
+                                min="1">
+        
+                        <label for="mutationEnd" style="margin-top: 5px;">Конечная позиция:</label>
+                        <input type="number" id="mutationEnd" 
+                                class="mutation-input" 
+                                placeholder="Конец"
+                                min="1">
+                    </div>
+    
+                    <!-- Поле для вставки между позициями -->
+                    <div class="mutation-param" id="insertBetweenParam">
+                        <label>
+                            <i class="fas fa-arrows-alt-h"></i> Вставка между позициями:
+                        </label>
+                        <div class="insertion-info">
+                            <span class="insertion-label">Между нуклеотидами:</span>
+                            <span id="insertBefore">X </span>
+                            <i class="fas fa-arrow-right"></i>
+                            <span id="insertAfter">X + 1</span>
+                        </div>
+                        <div class="position-input-group">
+                            <input type="number" id="insertPosition" 
+                                    class="mutation-input" 
+                                    placeholder="Введите X"
+                                    min="1">
+                        </div>
+                    </div>
+    
+                    <!-- Выбор экзона для удаления -->
+                    <div class="mutation-param" id="exonParam">
+                        <label for="exonSelect">
+                            <i class="fas fa-code-branch"></i> Выберите экзон:
+                        </label>
+                        <select id="exonSelect" class="mutation-input">
+                            <option value="">-- Выберите экзон --</option>
+                            <!-- Будет заполнено динамически -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Кнопки управления -->
+                <div class="mutation-section">
+                    <div class="mutation-buttons">
+                        <button id="applyMutation" class="mutation-btn primary-btn">
+                            <i class="fas fa-play"></i> Выполнить
+                        </button>
+                        <button id="resetMutation" class="mutation-btn secondary-btn">
+                            <i class="fas fa-undo"></i> Сбросить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Результат мутации -->
+                <div class="mutation-section">
+                    <h4><i class="fas fa-chart-line"></i> Результат</h4>
+                    <div id="mutationResult" class="mutation-result">
+                        <p>Действие не выполнено</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фон для меню -->
+        <div id="mutationMenuOverlay" class="mutation-menu-overlay"></div>
 
         <!-- Форма построения гена -->
         <section class="build-section">
@@ -146,5 +288,6 @@
     <!-- JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mutation.js') }}"></script>
 </body>
 </html>
