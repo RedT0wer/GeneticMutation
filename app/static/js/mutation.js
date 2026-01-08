@@ -353,6 +353,85 @@ function showError(message) {
     }
 }
 
+function FindExon(position) {
+    const exons = currentGene.base_sequence.exons;
+    const utr5 = currentGene.base_sequence.utr5.length;
+    position = parseInt(position) + parseInt(utr5) - 1;
+
+    for (const exon of exons) {
+        if (exon.start_position <= position && position <= exon.end_position) {
+            return [exon.number, position - exon.start_position];
+        }
+    }
+}
+
+function FindDomain(position) {
+    const current_domains = currentGene.protein.domains;
+    positon = parseInt((parseInt(position) - 1) / 3);
+
+    for(const domain of current_domains) {
+        console.log(domain.name);
+        if (domain.start <= position && position <= domain.end) {            
+            return [domain.name, position - domain.start];
+        }
+    }
+}
+
+function ShowFindExon(exon_number, position) {
+    element = document.querySelector(`[data-exon-number="${exon_number}"]`);
+    element = element.getElementsByClassName('sequence-content')[0];
+    if (element.childElementCount == 2) {
+        element_utr = element.getElementsByClassName('utr')[0];
+        position = position - element_utr.textContent.trim().length;
+    }
+    codingSequenceElement = element.getElementsByClassName('coding')[0];
+    sequence = codingSequenceElement.textContent.trim();
+    
+    // Разделяем последовательность
+    before = sequence.slice(0, position);
+    atPosition = sequence.charAt(position);
+    after = sequence.slice(position + 1);
+
+    // Создаем новые spans
+    beforeSpan = document.createElement('span');
+    atPositionSpan = document.createElement('span');
+    afterSpan = document.createElement('span');
+
+    beforeSpan.textContent = before;
+    atPositionSpan.textContent = atPosition;
+    atPositionSpan.classList.add("find");
+    afterSpan.textContent = after;
+
+    // Очищаем оригинальный элемент и добавляем новые
+    codingSequenceElement.innerHTML = ''; // Очищаем содержимое
+    codingSequenceElement.appendChild(beforeSpan);
+    codingSequenceElement.appendChild(atPositionSpan);
+    codingSequenceElement.appendChild(afterSpan);
+
+    // Эмулируем нажатие клавиши Escape
+    const escapeEvent = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        keyCode: 27,
+        code: 'Escape',
+        which: 27,
+        bubbles: true,
+    });
+    document.dispatchEvent(escapeEvent);
+
+    // Прокручиваем страницу к созданному элементу
+    const rect = codingSequenceElement.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const scrollTop = window.scrollY;
+
+    // Вычисляем новую позицию для прокрутки
+    const newScrollTop = scrollTop + rect.top - (windowHeight / 2 - rect.height / 2);
+    window.scrollTo({ top: newScrollTop, behavior: 'smooth' });
+
+    return atPosition;
+}
+
+
+
 // Показать результат
 function showResult(type, data) {
     const resultDiv = document.getElementById('mutationResult');
@@ -370,11 +449,16 @@ function showResult(type, data) {
     setTimeout(() => {
         switch(type) {
             case 'find':
+                result = FindExon(data.position);
+                [exon_number, find_position_exon] = result;
+                nucleotide = ShowFindExon(exon_number, find_position_exon);
+                result = FindDomain(data.position);
+                [domain_name, find_position_domain] = result;
                 resultHTML = `
                     <p><strong>Результат поиска</strong></p>
-                    <p>Позиция: <strong>${data.position}</strong></p>
-                    <p>Найдено в экзоне: <strong>Экзон ${Math.ceil(data.position / 100)}</strong></p>
-                    <p>Нуклеотид: <strong>${getRandomNucleotide()}</strong></p>
+                    <p>Найдено в экзоне: <strong>Экзон ${exon_number}</strong></p>
+                    <p>Нуклеотид: <strong>${nucleotide}</strong></p>
+                    <p>Найдено в домене: <strong>Домен ${domain_name}</strong></p>
                     <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
                 `;
                 break;
@@ -435,12 +519,6 @@ function getTypeName(type) {
         'exon_deletion': 'удаление экзона'
     };
     return names[type] || 'действие';
-}
-
-// Получить случайный нуклеотид
-function getRandomNucleotide() {
-    const nucleotides = ['A', 'T', 'C', 'G'];
-    return nucleotides[Math.floor(Math.random() * nucleotides.length)];
 }
 
 // Функция для кнопки "Сбросить"
