@@ -117,25 +117,31 @@ function displayExons(exons, totalLength) {
         // Создаем элементы для каждого нуклеотида
         for (let i = 0; i < exonSequence.length; i++) {
             const nucleotide = exonSequence[i];
-            const globalPosition = exon.start_position + i + 1;
-            
-            // Вычисления для нуклеотида
-            const positionNucleotide = globalPosition;
-            const numberCodon = Math.floor(i / 3);
-            const isUtr = globalPosition < utr5.end_position || globalPosition >= utr3.start_position;
+            let globalPosition = exon.start_position + i + 1 - utr5.length;
+            let numberCodon = Math.floor((globalPosition - 1) / 3) + 1;
+            const isUtr = exon.start_position + i <= utr5.end_position || exon.start_position + i >= utr3.start_position;
+            const isCoding = !isUtr;
+            const region = isCoding ? "кодирующая" : "utr"
             
             // Определяем классы для нуклеотида
-            let classes = 'coding';
+            let classes = '';
             if (isUtr) {
+                globalPosition = -1
+                numberCodon = -1
                 classes = 'utr';
+            }
+            if (isCoding) {
+                classes = 'coding';
             }
             
             // Создаем данные для шаблона нуклеотида
             const nucleotideData = {
                 classes: classes,
-                position_nucleotide: positionNucleotide,
+                position_nucleotide: globalPosition,
                 number_codon: numberCodon,
                 isUtr: isUtr,
+                isCoding: isCoding,
+                region: region,
                 nucleotide: nucleotide
             };
             

@@ -38,10 +38,11 @@
     <!-- Шаблон нуклеотида -->
     <script type="text/template" id="nucleotideTemplate">
         <span 
-            style="margin-right: -4px;"
+            title="Номер нуклеотида: <%= position_nucleotide %>&#010;Номер кодона: <%= number_codon %>&#010;Область: <%= region %>"
             class="<%= classes %>"
             data-position="<%= position_nucleotide %>"
             data-codon="<%= number_codon %>"
+            data-is-coding="<%= isCoding %>"
             data-is-utr="<%= isUtr %>" >
             <%= nucleotide %> 
         </span>
@@ -60,11 +61,18 @@
                 </div>
             </div>
 
-            <!-- Последовательность -->
             <div class="sequence-content">
-                <span><%= sequence %></span>
             </div>
         </div>
+    </script>
+
+    <!-- Шаблон аминокислоты -->
+    <script type="text/template" id="aminoacidTemplate">
+        <span 
+            title="Номер аминокислоты: <%= position_aminoacid %>"
+            data-position="<%= position_aminoacid %>" >
+            <%= aminoacid %> 
+        </span>
     </script>
     
     {% block scripts %}
