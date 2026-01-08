@@ -59,7 +59,7 @@
 
 .mutation-menu-header h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 30px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -83,6 +83,7 @@
 .mutation-menu-content {
     padding: 20px;
     flex: 1;
+    font-size: 20px;
 }
 
 /* Секции меню */
@@ -138,7 +139,6 @@
 }
 
 .mutation-type-option span {
-    font-size: 14px;
     font-weight: 500;
 }
 
@@ -152,7 +152,7 @@
     margin-bottom: 6px;
     color: #495057;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 17px;
 }
 
 .mutation-input {
@@ -222,7 +222,6 @@
 .mutation-result p {
     margin: 0;
     color: #495057;
-    font-size: 14px;
     line-height: 1.5;
 }
 
@@ -257,4 +256,9 @@
     .mutation-type-selector {
         grid-template-columns: 1fr;
     }
+}
+
+/* Стили для мутаций */
+.find {
+    color: red;
 }
