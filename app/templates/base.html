@@ -23,8 +23,9 @@
                 <div class="exon-meta">
                     <span class="badge">Экзон <%= number %></span>
                     <% if (start_phase != -1 && end_phase != -1) { %>
-                        <span class="position-badge">Позиция: <%= (start_position + 1 - utr5 > 1) ? (start_position + 1 - utr5) : 1 %>-<%= (end_position+1-utr5 <= utr3) ? end_position+1-utr5 : utr3-utr5 %></span>
+                        <span class="position-badge">Позиция: <%= (start_position - utr5 > 1) ? (start_position - utr5) : 1 %>-<%= (end_position - utr5 <= utr3) ? end_position - utr5 : utr3 - utr5 %></span>
                     <% } %>
+                    <span class="position-badge">Длина: <%= length %></span>
                     <span class="position-badge">Начальная фаза: <%= start_phase %></span>
                     <span class="position-badge">Конечная фаза: <%= end_phase %></span>
                 </div>

@@ -70,7 +70,7 @@ function displayGeneInfo(gene) {
     `;
 }
 
-function displayExons(exons, totalLength) {
+function displayExons(exons) {
     const container = document.getElementById('exonsContainer');
     const countEl = document.getElementById('exonCount');
     const full_sequence = currentGene.base_sequence.full_sequence;
@@ -96,6 +96,7 @@ function displayExons(exons, totalLength) {
             ...exon,
             identifier: currentGene.base_sequence.identifier,
             sequence: exonSequence,
+            length: exonSequence.length,
             utr5: utr5.end_position,
             utr3: utr3.start_position
         };
@@ -169,27 +170,76 @@ function displayExons(exons, totalLength) {
 }
 
 // Отображение доменов
-function displayDomains(domains, totalLength) {
+function displayDomains(domains) {
     const container = document.getElementById('domainsContainer');
     const countEl = document.getElementById('domainCount');
     
+    // Очищаем контейнер
     container.innerHTML = '';
+    
+    // Обновляем статистику сразу
+    countEl.innerHTML = `<i class="fas fa-shapes"></i> ${domains.length} доменов`;
+    
+    // Если нет доменов, выходим
+    if (domains.length === 0) return;
+    
+    // Создаем DocumentFragment для более эффективного добавления
+    const fragment = document.createDocumentFragment();
     
     domains.forEach(domain => {
         const domainLength = domain.end - domain.start + 1;
         
         const domainData = {
-            ...domain,
-            total_length: totalLength,
-            sequence: domain.sequence
+            ...domain
         };
         
-        const html = compileTemplate('domainTemplate', domainData);
-        container.innerHTML += html;
+        // Создаем HTML домена
+        const domainHtml = compileTemplate('domainTemplate', domainData);
+        
+        // Создаем временный контейнер для парсинга HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = domainHtml;
+        const domainElement = tempDiv.firstElementChild;
+        
+        // Находим контейнер для последовательности
+        const sequenceContent = domainElement.querySelector('.sequence-content');
+        
+        // Создаем DocumentFragment для аминокислот
+        const aminoacidsFragment = document.createDocumentFragment();
+        
+        // Создаем элементы для каждой
+        for (let i = 0; i < domain.sequence.length; i++) {
+            const aminoacid = domain.sequence[i];
+            // Позиция аминокислоты в белке (от 1)
+            const positionAminoacid = domain.start + i + 1;
+                
+            // Создаем данные для шаблона аминокислоты
+            const aminoacidData = {
+                position_aminoacid: positionAminoacid,
+                aminoacid: aminoacid
+            };
+                
+            // Создаем элемент аминокислоты
+            const aminoacidHtml = compileTemplate('aminoacidTemplate', aminoacidData);
+                
+            // Создаем временный элемент для аминокислоты
+            const tempSpan = document.createElement('span');
+            tempSpan.innerHTML = aminoacidHtml;
+            const aminoacidElement = tempSpan.firstElementChild;
+                
+            // Добавляем аминокислоту во фрагмент
+            aminoacidsFragment.appendChild(aminoacidElement);
+        }
+        
+        // Добавляем все аминокислоты в контейнер последовательности
+        sequenceContent.appendChild(aminoacidsFragment);
+        
+        // Добавляем домен во фрагмент
+        fragment.appendChild(domainElement);
     });
     
-    // Обновляем статистику
-    countEl.innerHTML = `<i class="fas fa-shapes"></i> ${domains.length} доменов`;
+    // Добавляем все домены на страницу за одну операцию
+    container.appendChild(fragment);
 }
 
 // Построение гена через API
@@ -229,7 +279,7 @@ async function buildGene() {
         
         // Отображаем информацию
         displayGeneInfo(currentGene);
-        displayExons(currentGene.base_sequence.exons, currentGene.base_sequence.length);
+        displayExons(currentGene.base_sequence.exons);
         displayDomains(currentGene.protein.domains, currentGene.protein.length);
         
         // Показываем содержимое
