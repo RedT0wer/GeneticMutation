@@ -354,15 +354,8 @@ function showError(message) {
 }
 
 function FindExon(position) {
-    const exons = currentGene.base_sequence.exons;
-    const utr5 = currentGene.base_sequence.utr5.length;
-    position = parseInt(position) + parseInt(utr5) - 1;
-
-    for (const exon of exons) {
-        if (exon.start_position <= position && position <= exon.end_position) {
-            return [exon.number, position - exon.start_position];
-        }
-    }
+    const element = document.querySelector(`[data-position="${position}"]`);
+    element.classList.add("find");
 }
 
 function FindDomain(position) {
@@ -430,8 +423,6 @@ function ShowFindExon(exon_number, position) {
     return atPosition;
 }
 
-
-
 // Показать результат
 function showResult(type, data) {
     const resultDiv = document.getElementById('mutationResult');
@@ -449,16 +440,14 @@ function showResult(type, data) {
     setTimeout(() => {
         switch(type) {
             case 'find':
-                result = FindExon(data.position);
-                [exon_number, find_position_exon] = result;
-                nucleotide = ShowFindExon(exon_number, find_position_exon);
-                result = FindDomain(data.position);
-                [domain_name, find_position_domain] = result;
+                restorePage();
+                backupPage();
+                FindExon(data.position);
                 resultHTML = `
                     <p><strong>Результат поиска</strong></p>
-                    <p>Найдено в экзоне: <strong>Экзон ${exon_number}</strong></p>
-                    <p>Нуклеотид: <strong>${nucleotide}</strong></p>
-                    <p>Найдено в домене: <strong>Домен ${domain_name}</strong></p>
+                    <p>Найдено в экзоне: <strong>Экзон ${1}</strong></p>
+                    <p>Нуклеотид: <strong>${1}</strong></p>
+                    <p>Найдено в домене: <strong>Домен ${1}</strong></p>
                     <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
                 `;
                 break;
@@ -534,3 +523,24 @@ document.getElementById('resetMutation')?.addEventListener('click', function() {
         updateMutationForm('find');
     }
 });
+
+// Супер-мини версия
+let pageBackup = null;
+
+function backupPage() {
+    pageBackup = {
+        exons: document.getElementById('exonsContainer')?.innerHTML,
+        domains: document.getElementById('domainsContainer')?.innerHTML,
+        time: Date.now()
+    };
+}
+
+function restorePage() {
+    if (!pageBackup) return;
+    
+    const exons = document.getElementById('exonsContainer');
+    const domains = document.getElementById('domainsContainer');
+    
+    if (exons && pageBackup.exons) exons.innerHTML = pageBackup.exons;
+    if (domains && pageBackup.domains) domains.innerHTML = pageBackup.domains;
+}
