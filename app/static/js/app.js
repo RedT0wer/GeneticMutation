@@ -79,101 +79,87 @@ function displayExons(exons, totalLength) {
     const utr5 = currentGene.base_sequence.utr5;
     const utr3 = currentGene.base_sequence.utr3;
     
+    // Очищаем контейнер
     container.innerHTML = '';
     
-    exons.forEach(exon => {
+    // Обновляем статистику сразу
+    countEl.innerHTML = `<i class="fas fa-layer-group"></i> ${exons.length} экзонов`;
+    
+    // Создаем DocumentFragment для более эффективного добавления
+    const fragment = document.createDocumentFragment();
+    
+    for(const exon of exons) {
         // Получаем полную последовательность экзона
         const exonSequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
         
-        // Определяем, какие части экзона относятся к UTR
-        let sequenceParts = [];
-        
-        // Проверяем пересечение с 5' UTR
-        if (utr5 && exon.end_position >= utr5.start_position && exon.start_position <= utr5.end_position) {
-            const utrStart = Math.max(exon.start_position, utr5.start_position);
-            const utrEnd = Math.min(exon.end_position, utr5.end_position);
-            const utrPart = full_sequence.slice(utrStart, utrEnd + 1);
-            sequenceParts.push({
-                type: 'utr',
-                sequence: utrPart,
-                start: utrStart - exon.start_position,
-                end: utrEnd - exon.start_position
-            });
-        }
-        
-        // Проверяем пересечение с 3' UTR
-        if (utr3 && exon.end_position >= utr3.start_position && exon.start_position <= utr3.end_position) {
-            const utrStart = Math.max(exon.start_position, utr3.start_position);
-            const utrEnd = Math.min(exon.end_position, utr3.end_position);
-            const utrPart = full_sequence.slice(utrStart, utrEnd + 1);
-            sequenceParts.push({
-                type: 'utr',
-                sequence: utrPart,
-                start: utrStart - exon.start_position,
-                end: utrEnd - exon.start_position
-            });
-        }
-        
-        // Определяем кодирующие части (не UTR)
-        let codingParts = [];
-        let lastEnd = 0;
-        
-        // Сортируем UTR части по позиции
-        sequenceParts.sort((a, b) => a.start - b.start);
-        
-        sequenceParts.forEach((part, index) => {
-            // Добавляем кодирующую часть перед текущим UTR
-            if (part.start > lastEnd) {
-                codingParts.push({
-                    type: 'coding',
-                    sequence: exonSequence.slice(lastEnd, part.start),
-                    start: lastEnd,
-                    end: part.start - 1
-                });
-            }
-            
-            lastEnd = part.end + 1;
-            
-            // Добавляем кодирующую часть после последнего UTR
-            if (index === sequenceParts.length - 1 && lastEnd < exonSequence.length) {
-                codingParts.push({
-                    type: 'coding',
-                    sequence: exonSequence.slice(lastEnd),
-                    start: lastEnd,
-                    end: exonSequence.length - 1
-                });
-            }
-        });
-        
-        // Если нет UTR частей, весь экзон - кодирующий
-        if (sequenceParts.length === 0) {
-            codingParts.push({
-                type: 'coding',
-                sequence: exonSequence,
-                start: 0,
-                end: exonSequence.length - 1
-            });
-        }
-        
-        // Объединяем все части в правильном порядке
-        const allParts = [...sequenceParts, ...codingParts].sort((a, b) => a.start - b.start);
-        
         const exonData = {
             ...exon,
-            total_length: totalLength,
             identifier: currentGene.base_sequence.identifier,
             sequence: exonSequence,
-            utr5: utr5.length,
-            utr3: utr3.start_position,
-            sequence_parts: allParts
+            utr5: utr5.end_position,
+            utr3: utr3.start_position
         };
         
-        const html = compileTemplate('exonTemplate', exonData);
-        container.innerHTML += html;
-    });
+        // Создаем HTML экзона
+        const exonHtml = compileTemplate('exonTemplate', exonData);
+        
+        // Создаем временный контейнер для парсинга HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = exonHtml;
+        const exonElement = tempDiv.firstElementChild;
+        
+        // Находим контейнер для последовательности
+        const sequenceContent = exonElement.querySelector('.sequence-content');
+        
+        // Создаем DocumentFragment для нуклеотидов
+        const nucleotidesFragment = document.createDocumentFragment();
+        
+        // Создаем элементы для каждого нуклеотида
+        for (let i = 0; i < exonSequence.length; i++) {
+            const nucleotide = exonSequence[i];
+            const globalPosition = exon.start_position + i + 1;
+            
+            // Вычисления для нуклеотида
+            const positionNucleotide = globalPosition;
+            const numberCodon = Math.floor(i / 3);
+            const isUtr = globalPosition < utr5.end_position || globalPosition >= utr3.start_position;
+            
+            // Определяем классы для нуклеотида
+            let classes = 'coding';
+            if (isUtr) {
+                classes = 'utr';
+            }
+            
+            // Создаем данные для шаблона нуклеотида
+            const nucleotideData = {
+                classes: classes,
+                position_nucleotide: positionNucleotide,
+                number_codon: numberCodon,
+                isUtr: isUtr,
+                nucleotide: nucleotide
+            };
+            
+            // Создаем элемент нуклеотида
+            const nucleotideHtml = compileTemplate('nucleotideTemplate', nucleotideData);
+            
+            // Создаем временный элемент для нуклеотида
+            const tempSpan = document.createElement('span');
+            tempSpan.innerHTML = nucleotideHtml;
+            const nucleotideElement = tempSpan.firstElementChild;
+            
+            // Добавляем нуклеотид во фрагмент
+            nucleotidesFragment.appendChild(nucleotideElement);
+        }
+        
+        // Добавляем все нуклеотиды в контейнер последовательности
+        sequenceContent.appendChild(nucleotidesFragment);
+        
+        // Добавляем экзон во фрагмент
+        fragment.appendChild(exonElement);
+    }
     
-    // Обновляем статистику
-    countEl.innerHTML = `<i class="fas fa-layer-group"></i> ${exons.length} экзонов`;
+    // Добавляем все экзоны на страницу за одну операцию
+    container.appendChild(fragment);
 }
 
 // Отображение доменов

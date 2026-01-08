@@ -29,22 +29,22 @@
                     <span class="position-badge">Конечная фаза: <%= end_phase %></span>
                 </div>
             </div>
-            
-            <!-- Последовательность -->
+        
             <div class="sequence-content">
-                <% sequence_parts.forEach(function(part) { %>
-                    <% if (part.type === 'utr') { %>
-                        <span class="utr" title="UTR область">
-                            <%= part.sequence %>
-                        </span>
-                    <% } else { %>
-                        <span title="Кодирующая область">
-                            <%= part.sequence %>
-                        </span>
-                    <% } %>
-                <% }); %>
             </div>
         </div>
+    </script>
+
+    <!-- Шаблон нуклеотида -->
+    <script type="text/template" id="nucleotideTemplate">
+        <span 
+            style="margin-right: -4px;"
+            class="<%= classes %>"
+            data-position="<%= position_nucleotide %>"
+            data-codon="<%= number_codon %>"
+            data-is-utr="<%= isUtr %>" >
+            <%= nucleotide %> 
+        </span>
     </script>
 
     <!-- Шаблон домена -->
