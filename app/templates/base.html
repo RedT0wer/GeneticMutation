@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gene Structure Visualizer{% endblock %}</title>
+    {% block styles %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/mutation.css') }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Шаблоны -->
+    <!-- Шаблон экзона -->
+    <script type="text/template" id="exonTemplate">
+        <div class="exon-card" data-exon-number="<%= number %>">
+            <div class="exon-header">
+                <div class="exon-meta">
+                    <span class="badge">Экзон <%= number %></span>
+                    <% if (start_phase != -1 && end_phase != -1) { %>
+                        <span class="position-badge">Позиция: <%= (start_position + 1 - utr5 > 1) ? (start_position + 1 - utr5) : 1 %>-<%= (end_position+1-utr5 <= utr3) ? end_position+1-utr5 : utr3-utr5 %></span>
+                    <% } %>
+                    <span class="position-badge">Начальная фаза: <%= start_phase %></span>
+                    <span class="position-badge">Конечная фаза: <%= end_phase %></span>
+                </div>
+            </div>
+            
+            <!-- Последовательность -->
+            <div class="sequence-content">
+                <% sequence_parts.forEach(function(part) { %>
+                    <% if (part.type === 'utr') { %>
+                        <span class="utr" title="UTR область">
+                            <%= part.sequence %>
+                        </span>
+                    <% } else { %>
+                        <span title="Кодирующая область">
+                            <%= part.sequence %>
+                        </span>
+                    <% } %>
+                <% }); %>
+            </div>
+        </div>
+    </script>
+
+    <!-- Шаблон домена -->
+    <script type="text/template" id="domainTemplate">
+        <div class="domain-card" data-domain-name="<%= name %>">
+            <div class="domain-header">
+                <div class="domain-meta">
+                    <span class="badge badge-domain"><%= name %></span>
+                    <% if (type != "unknown") { %>
+                        <span class="position-badge"><%= type %></span>
+                    <% } %>
+                    <span class="position-badge">Позиция в белке: <%= start+1 %>-<%= end+1 %></span>
+                </div>
+            </div>
+
+            <!-- Последовательность -->
+            <div class="sequence-content">
+                <span><%= sequence %></span>
+            </div>
+        </div>
+    </script>
+    
+    {% block scripts %}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/mutation.js') }}"></script>
+    {% endblock %}
+</body>
+</html>
