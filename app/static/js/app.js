@@ -75,98 +75,91 @@ function displayExons(exons) {
     const countEl = document.getElementById('exonCount');
     const full_sequence = currentGene.base_sequence.full_sequence;
     
-    // Получаем UTR области из base_sequence
     const utr5 = currentGene.base_sequence.utr5;
     const utr3 = currentGene.base_sequence.utr3;
-    
-    // Очищаем контейнер
+
     container.innerHTML = '';
     
-    // Обновляем статистику сразу
     countEl.innerHTML = `<i class="fas fa-layer-group"></i> ${exons.length} экзонов`;
     
-    // Создаем DocumentFragment для более эффективного добавления
     const fragment = document.createDocumentFragment();
-    
-    for(const exon of exons) {
-        // Получаем полную последовательность экзона
-        const exonSequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
-        
-        const exonData = {
-            ...exon,
-            identifier: currentGene.base_sequence.identifier,
-            sequence: exonSequence,
-            length: exonSequence.length,
-            utr5: utr5.end_position,
-            utr3: utr3.start_position
-        };
-        
-        // Создаем HTML экзона
-        const exonHtml = compileTemplate('exonTemplate', exonData);
-        
-        // Создаем временный контейнер для парсинга HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = exonHtml;
-        const exonElement = tempDiv.firstElementChild;
-        
-        // Находим контейнер для последовательности
-        const sequenceContent = exonElement.querySelector('.sequence-content');
-        
-        // Создаем DocumentFragment для нуклеотидов
-        const nucleotidesFragment = document.createDocumentFragment();
-        
-        // Создаем элементы для каждого нуклеотида
-        for (let i = 0; i < exonSequence.length; i++) {
-            const nucleotide = exonSequence[i];
-            let globalPosition = exon.start_position + i + 1 - utr5.length;
-            let numberCodon = Math.floor((globalPosition - 1) / 3) + 1;
-            const isUtr = exon.start_position + i <= utr5.end_position || exon.start_position + i >= utr3.start_position;
-            const isCoding = !isUtr;
-            const region = isCoding ? "кодирующая" : "utr"
-            
-            // Определяем классы для нуклеотида
-            let classes = '';
-            if (isUtr) {
-                globalPosition = -1
-                numberCodon = -1
-                classes = 'utr';
-            }
-            if (isCoding) {
-                classes = 'coding';
-            }
-            
-            // Создаем данные для шаблона нуклеотида
-            const nucleotideData = {
-                classes: classes,
-                position_nucleotide: globalPosition,
-                number_codon: numberCodon,
-                isUtr: isUtr,
-                isCoding: isCoding,
-                region: region,
-                nucleotide: nucleotide
-            };
-            
-            // Создаем элемент нуклеотида
-            const nucleotideHtml = compileTemplate('nucleotideTemplate', nucleotideData);
-            
-            // Создаем временный элемент для нуклеотида
-            const tempSpan = document.createElement('span');
-            tempSpan.innerHTML = nucleotideHtml;
-            const nucleotideElement = tempSpan.firstElementChild;
-            
-            // Добавляем нуклеотид во фрагмент
-            nucleotidesFragment.appendChild(nucleotideElement);
-        }
-        
-        // Добавляем все нуклеотиды в контейнер последовательности
-        sequenceContent.appendChild(nucleotidesFragment);
-        
-        // Добавляем экзон во фрагмент
+
+    for (const exon of exons) {
+        const exonData = createExonData(exon, full_sequence, utr5, utr3);
+        const exonElement = createExonElement(exonData);
         fragment.appendChild(exonElement);
     }
     
-    // Добавляем все экзоны на страницу за одну операцию
     container.appendChild(fragment);
+}
+
+function createExonData(exon, full_sequence, utr5, utr3) {
+    const exonSequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
+    
+    return {
+        ...exon,
+        identifier: currentGene.base_sequence.identifier,
+        sequence: exonSequence,
+        length: exonSequence.length,
+        utr5: utr5.end_position,
+        utr3: utr3.start_position
+    };
+}
+
+function createExonElement(exonData) {
+    const exonHtml = compileTemplate('exonTemplate', exonData);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = exonHtml;
+    const exonElement = tempDiv.firstElementChild;
+
+    const sequenceContent = exonElement.querySelector('.sequence-content');
+    const nucleotidesFragment = createNucleotidesFragment(exonData.sequence, exonData.start_position, exonData.utr5, exonData.utr3);
+    
+    sequenceContent.appendChild(nucleotidesFragment);
+    
+    return exonElement;
+}
+
+function createNucleotidesFragment(exonSequence, startPosition, utr5End, utr3Start) {
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < exonSequence.length; i++) {
+        const nucleotide = exonSequence[i];
+        const { globalPosition, numberCodon, isUtr, isCoding, region } = calculateNucleotideProperties(startPosition, i, utr5End, utr3Start);
+        
+        const nucleotideData = {
+            classes: isUtr ? 'utr' : 'coding',
+            position_nucleotide: isUtr ? -1 : globalPosition,
+            number_codon: isUtr ? -1 : numberCodon,
+            isUtr: isUtr,
+            isCoding: isCoding,
+            region: region,
+            nucleotide: nucleotide
+        };
+        
+        const nucleotideElement = createNucleotideElement(nucleotideData);
+        fragment.appendChild(nucleotideElement);
+    }
+    
+    return fragment;
+}
+
+function calculateNucleotideProperties(startPosition, index, utr5End, utr3Start) {
+    const globalPosition = startPosition + index + 1 - utr5End;
+    const numberCodon = Math.floor((globalPosition - 1) / 3) + 1;
+    const isUtr = startPosition + index <= utr5End || startPosition + index >= utr3Start;
+    const isCoding = !isUtr;
+    const region = isCoding ? "кодирующая" : "utr";
+
+    return { globalPosition, numberCodon, isUtr, isCoding, region };
+}
+
+function createNucleotideElement(nucleotideData) {
+    const nucleotideHtml = compileTemplate('nucleotideTemplate', nucleotideData);
+    const tempSpan = document.createElement('span');
+    tempSpan.innerHTML = nucleotideHtml;
+    
+    return tempSpan.firstElementChild;
 }
 
 // Отображение доменов
@@ -195,46 +188,7 @@ function displayDomains(domains) {
             number: i+1,
         };
         
-        // Создаем HTML домена
-        const domainHtml = compileTemplate('domainTemplate', domainData);
-        
-        // Создаем временный контейнер для парсинга HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = domainHtml;
-        const domainElement = tempDiv.firstElementChild;
-        
-        // Находим контейнер для последовательности
-        const sequenceContent = domainElement.querySelector('.sequence-content');
-        
-        // Создаем DocumentFragment для аминокислот
-        const aminoacidsFragment = document.createDocumentFragment();
-        
-        // Создаем элементы для каждой
-        for (let i = 0; i < domain.sequence.length; i++) {
-            const aminoacid = domain.sequence[i];
-            // Позиция аминокислоты в белке (от 1)
-            const positionAminoacid = domain.start + i + 1;
-                
-            // Создаем данные для шаблона аминокислоты
-            const aminoacidData = {
-                position_aminoacid: positionAminoacid,
-                aminoacid: aminoacid
-            };
-                
-            // Создаем элемент аминокислоты
-            const aminoacidHtml = compileTemplate('aminoacidTemplate', aminoacidData);
-                
-            // Создаем временный элемент для аминокислоты
-            const tempSpan = document.createElement('span');
-            tempSpan.innerHTML = aminoacidHtml;
-            const aminoacidElement = tempSpan.firstElementChild;
-                
-            // Добавляем аминокислоту во фрагмент
-            aminoacidsFragment.appendChild(aminoacidElement);
-        }
-        
-        // Добавляем все аминокислоты в контейнер последовательности
-        sequenceContent.appendChild(aminoacidsFragment);
+        domainElement = createDomainElement(domainData);
         
         // Добавляем домен во фрагмент
         fragment.appendChild(domainElement);
@@ -242,6 +196,51 @@ function displayDomains(domains) {
     
     // Добавляем все домены на страницу за одну операцию
     container.appendChild(fragment);
+}
+
+function createDomainElement(domainData) {
+    // Создаем HTML домена
+    const domainHtml = compileTemplate('domainTemplate', domainData);
+        
+    // Создаем временный контейнер для парсинга HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = domainHtml;
+    const domainElement = tempDiv.firstElementChild;
+        
+    // Находим контейнер для последовательности
+    const sequenceContent = domainElement.querySelector('.sequence-content');
+        
+    // Создаем DocumentFragment для аминокислот
+    const aminoacidsFragment = document.createDocumentFragment();
+        
+    // Создаем элементы для каждой
+    for (let i = 0; i < domain.sequence.length; i++) {
+        const aminoacid = domain.sequence[i];
+        // Позиция аминокислоты в белке (от 1)
+        const positionAminoacid = domain.start + i + 1;
+                
+        // Создаем данные для шаблона аминокислоты
+        const aminoacidData = {
+            position_aminoacid: positionAminoacid,
+            aminoacid: aminoacid
+        };
+                
+        // Создаем элемент аминокислоты
+        const aminoacidHtml = compileTemplate('aminoacidTemplate', aminoacidData);
+                
+        // Создаем временный элемент для аминокислоты
+        const tempSpan = document.createElement('span');
+        tempSpan.innerHTML = aminoacidHtml;
+        const aminoacidElement = tempSpan.firstElementChild;
+                
+        // Добавляем аминокислоту во фрагмент
+        aminoacidsFragment.appendChild(aminoacidElement);
+    }
+        
+    // Добавляем все аминокислоты в контейнер последовательности
+    sequenceContent.appendChild(aminoacidsFragment);
+
+    return domainElement;
 }
 
 // Построение гена через API
