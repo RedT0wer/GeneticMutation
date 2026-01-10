@@ -362,7 +362,7 @@ function FindAminoacid(position) {
     return document.querySelector(`[data-position-aminoacid="${position}"]`);
 }
 
-function Substitution(position, new_nucleotide, new_aminoacid){
+function Substitution(position, new_nucleotide, new_aminoacid) {
     nucleotide = FindNucleotide(position);
     nucleotide.classList.add("substitution");
     new_nucleotide_element = nucleotide.cloneNode(true);
@@ -374,6 +374,54 @@ function Substitution(position, new_nucleotide, new_aminoacid){
     new_aminoacid_element = aminoacid.cloneNode(true);
     new_aminoacid_element.innerText = "(" + new_aminoacid + ")";
     aminoacid.after(new_aminoacid_element);
+}
+
+function Insertion(insertPos, sequence, stop_codon_pos) {
+    nucleotide = FindNucleotide(insertPos);
+
+    nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
+    for(let i = 0; i < nucleotides.length; i++) {
+        element = nucleotides[i];
+        value = parseInt(element.getAttribute("data-position-nucleotide"));
+        if (value > insertPos) {
+            element.setAttribute("data-position-nucleotide", value + sequence.length);
+            number_codon = parseInt((value + sequence.length - 1) / 3) + 1;
+            element.setAttribute("title", `Номер нуклеотида: ${value + sequence.length}\nНомер кодона: ${number_codon}\nОбласть: кодирующая`);
+
+            if (i - 1 > stop_codon_pos - 3) {
+                element.classList.add("stop_codon");
+            } 
+        }
+        if (i - 1 == stop_codon_pos) {
+            break;
+        }
+    }
+
+    for(let i = 0; i < sequence.length; i++) {
+        const nucleotideData = {
+            classes: 'coding insertion',
+            position_nucleotide: insertPos + 1 + i,
+            number_codon: (insertPos - 1) / 3 + 1,
+            isUtr: false,
+            isCoding: true,
+            region: "кодирующая",
+            nucleotide: sequence[i],
+        };
+        
+        nucleotideElement = createNucleotideElement(nucleotideData);
+        
+        nucleotide.after(nucleotideElement);
+        nucleotide = nucleotideElement;
+    }
+
+
+    // nucleotide.after(new_nucleotides);
+
+    // domainData = {
+    //     ...domain,
+    //     number_domain: number_domain,
+    // }
+    // domainElement = displayDomain(domainData);
 }
 
 // 3
@@ -479,7 +527,7 @@ function showResult(type, data, apiResult) {
     const resultDiv = document.getElementById('mutationResult');
     
     let resultHTML = '';
-    console.log(type);
+
     switch(type) {
         case 'find':
             resultHTML = `
@@ -493,7 +541,7 @@ function showResult(type, data, apiResult) {
             break;
 
         case 'substitution':
-        Substitution(parseInt(data.position), data.sequence.toUpperCase(), apiResult.new_aminoacid);
+            Substitution(parseInt(data.position), data.sequence.toUpperCase(), apiResult.new_aminoacid);
             resultHTML = `
                 <p><strong>Замена выполнена</strong></p>
                 <p>Позиция: <strong>${data.position}</strong></p>
@@ -505,6 +553,7 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'insertion':
+            Insertion(parseInt(data.insertPos), data.sequence.toUpperCase(), apiResult.stop_codon_position);
             resultHTML = `
                 <p><strong>Вставка выполнена</strong></p>
                 <p>Между позициями: <strong>${data.insertPos} и ${parseInt(data.insertPos) + 1}</strong></p>

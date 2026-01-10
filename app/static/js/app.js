@@ -145,7 +145,7 @@ function createNucleotidesFragment(exonSequence, startPosition, utr5End, utr3Sta
 }
 
 function calculateNucleotideProperties(startPosition, index, utr5End, utr3Start) {
-    const globalPosition = startPosition + index + 1 - utr5End;
+    const globalPosition = startPosition + index - utr5End;
     const numberCodon = Math.floor((globalPosition - 1) / 3) + 1;
     const isUtr = startPosition + index <= utr5End || startPosition + index >= utr3Start;
     const isCoding = !isUtr;

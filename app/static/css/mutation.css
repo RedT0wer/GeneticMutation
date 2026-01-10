@@ -259,6 +259,10 @@
 }
 
 /* Стили для мутаций */
-.find, .substitution {
+.find, .substitution, .insertion {
+    color: red;
+}
+
+.stop_codon {
     color: red;
 }

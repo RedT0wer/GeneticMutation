@@ -72,12 +72,14 @@ class SequenceMutationStrategy(MutationStrategy):
         while diff_pos < len(translated_result) and translated_result[diff_pos] == gene.protein.sequence[diff_pos]:
             diff_pos += 1
 
+        sequence = protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result
+
         # Создаем новый домен
         new_domain = ProteinDomain(
             name=f"{protein_domain.name}_mutated",
-            start=0,
-            end=len(translated_result) - 1,
-            sequence=protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result,
+            start=protein_domain.start,
+            end=protein_domain.start + len(sequence) - 1,
+            sequence=sequence,
             type=protein_domain.type
         )
         
