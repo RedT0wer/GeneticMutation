@@ -259,6 +259,6 @@
 }
 
 /* Стили для мутаций */
-.find {
+.find, .substitution {
     color: red;
 }

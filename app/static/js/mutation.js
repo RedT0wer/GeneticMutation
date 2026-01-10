@@ -385,6 +385,95 @@ function FindAminoacid(position) {
     return document.querySelector(`[data-position-aminoacid="${position}"]`);
 }
 
+function Substitution(position, new_nucleotide){
+    nucleotide = FindNucleotide(position);
+    nucleotide.classList.add("substitution");
+    new_nucleotide_element = nucleotide.cloneNode(true);
+    new_nucleotide_element.innerText = "(" + new_nucleotide + ")";
+    nucleotide.after(new_aminoacid_element);
+
+    aminoacid = FindAminoacid(position);
+    aminoacid.classList.add("substitution");
+    new_aminoacid_element = aminoacid.cloneNode(true);
+    new_aminoacid_element.innerText = "(" + "aminoacid" + ")";
+    aminoacid.after(new_aminoacid_element);
+}
+
+async function applyMutationApi(type, data) {
+    try {
+        // Подготавливаем данные для API
+        const mutationData = prepareMutationData(type, data);
+        
+        // Отправляем запрос к API
+        const response = await fetch(`/api/gene/mutate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gene: currentGeneData,
+                mutation: mutationData
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Unknown API error');
+        }
+        
+        return result;
+
+    } catch (error) {
+        console.error('Mutation API error:', error);
+        throw error;
+    }
+}
+
+function prepareMutationData(type, data) {
+    const baseData = {
+        mutation_type: type.toUpperCase()
+    };
+
+    switch(type) {
+        case 'substitution':
+            return {
+                ...baseData,
+                position_nucleotide: parseInt(data.position),
+                new_nucleotide: data.sequence.toUpperCase()
+            };
+            
+        case 'insertion':
+            return {
+                ...baseData,
+                start_position: parseInt(data.insertPos),
+                end_position: parseInt(data.insertPos) + 1,
+                inserted_sequence: data.sequence.toUpperCase()
+            };
+            
+        case 'deletion':
+            return {
+                ...baseData,
+                start_position: parseInt(data.startPos),
+                end_position: parseInt(data.endPos)
+            };
+            
+        case 'exon_deletion':
+            return {
+                ...baseData,
+                nucleotide_position: data.position ? parseInt(data.position) : null,
+                exon_number: parseInt(data.exon)
+            };
+            
+        default:
+            throw new Error(`Unknown mutation type: ${type}`);
+    }
+}
+
 // Показать результат
 function showResult(type, data) {
     const resultDiv = document.getElementById('mutationResult');
@@ -414,6 +503,9 @@ function showResult(type, data) {
             break;
                 
         case 'substitution':
+            restorePage();
+            backupPage();
+            Substitution(data.position, data.sequence);
             resultHTML = `
                 <p><strong>Замена выполнена</strong></p>
                 <p>Позиция: <strong>${data.position}</strong></p>
