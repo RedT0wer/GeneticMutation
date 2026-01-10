@@ -263,35 +263,7 @@ function clearAllFields() {
 }
 
 // Функция для кнопки "Выполнить"
-document.getElementById('applyMutation')?.addEventListener('click', function() {
-    const activeType = document.querySelector('.mutation-type-option.active')?.dataset.type;
-    const resultDiv = document.getElementById('mutationResult');
-    
-    if (!resultDiv) return;
-    
-    // Получаем значения полей
-    const position = document.getElementById('mutationPosition')?.value;
-    const sequence = document.getElementById('mutationSequence')?.value;
-    const startPos = document.getElementById('mutationStart')?.value;
-    const endPos = document.getElementById('mutationEnd')?.value;
-    const insertPos = document.getElementById('insertPosition')?.value;
-    const exonSelect = document.getElementById('exonSelect')?.value;
-    
-    // Валидация
-    if (!validateInputs(activeType, position, sequence, startPos, endPos, insertPos, exonSelect)) {
-        return;
-    }
-    
-    // Отображаем результат
-    showResult(activeType, {
-        position,
-        sequence,
-        startPos,
-        endPos,
-        insertPos,
-        exon: exonSelect
-    });
-});
+document.getElementById('applyMutation').addEventListener('click', handleApplyMutationWithApi);
 
 // Валидация ввода
 function validateInputs(type, position, sequence, startPos, endPos, insertPos, exon) {
@@ -373,7 +345,11 @@ function Find(position) {
         "domain_name": domain_name,
     };
 
-    return result;
+    return {
+        success: true,
+        data: result,
+        type: "FIND"
+    };
 }
 
 function FindNucleotide(position) {
@@ -382,64 +358,37 @@ function FindNucleotide(position) {
 
 function FindAminoacid(position) {
     position = parseInt((parseInt(position) - 1) / 3) + 1;
+    console.log(position);
     return document.querySelector(`[data-position-aminoacid="${position}"]`);
 }
 
-function Substitution(position, new_nucleotide){
+function Substitution(position, new_nucleotide, new_aminoacid){
     nucleotide = FindNucleotide(position);
     nucleotide.classList.add("substitution");
     new_nucleotide_element = nucleotide.cloneNode(true);
     new_nucleotide_element.innerText = "(" + new_nucleotide + ")";
-    nucleotide.after(new_aminoacid_element);
+    nucleotide.after(new_nucleotide_element);
 
     aminoacid = FindAminoacid(position);
     aminoacid.classList.add("substitution");
     new_aminoacid_element = aminoacid.cloneNode(true);
-    new_aminoacid_element.innerText = "(" + "aminoacid" + ")";
+    new_aminoacid_element.innerText = "(" + new_aminoacid + ")";
     aminoacid.after(new_aminoacid_element);
 }
 
-async function applyMutationApi(type, data) {
-    try {
-        // Подготавливаем данные для API
-        const mutationData = prepareMutationData(type, data);
-        
-        // Отправляем запрос к API
-        const response = await fetch(`/api/gene/mutate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                gene: currentGeneData,
-                mutation: mutationData
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Unknown API error');
-        }
-        
-        return result;
-
-    } catch (error) {
-        console.error('Mutation API error:', error);
-        throw error;
-    }
-}
-
+// 3
 function prepareMutationData(type, data) {
     const baseData = {
         mutation_type: type.toUpperCase()
     };
 
     switch(type) {
+        case 'find':
+            return {
+                ...baseData,
+                position_nucleotide: parseInt(data.position),
+            };
+
         case 'substitution':
             return {
                 ...baseData,
@@ -465,8 +414,7 @@ function prepareMutationData(type, data) {
         case 'exon_deletion':
             return {
                 ...baseData,
-                nucleotide_position: data.position ? parseInt(data.position) : null,
-                exon_number: parseInt(data.exon)
+                nucleotide_position: parseInt(data.position),
             };
             
         default:
@@ -474,47 +422,88 @@ function prepareMutationData(type, data) {
     }
 }
 
-// Показать результат
-function showResult(type, data) {
+// 2.1)
+function getMutationFormData(type) {
+    return {
+        position: document.getElementById('mutationPosition')?.value,
+        sequence: document.getElementById('mutationSequence')?.value,
+        startPos: document.getElementById('mutationStart')?.value,
+        endPos: document.getElementById('mutationEnd')?.value,
+        insertPos: document.getElementById('insertPosition')?.value,
+    };
+}
+
+// 2.2)
+async function applyMutation(type, data) {
+    try {
+        restorePage();
+        backupPage();
+
+        // Подготавливаем данные для API
+        const mutationData = prepareMutationData(type, data);
+
+        if (type == "find") return Find(mutationData.position_nucleotide);
+        
+        // Отправляем запрос к API
+        const response = await fetch(`/api/gene/mutate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gene: currentGene,
+                mutation: mutationData
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Unknown API error');
+        }
+        
+        return result;
+
+    } catch (error) {
+        console.error('Mutation API error:', error);
+        throw error;
+    }
+}
+
+// 2.3)
+function showResult(type, data, apiResult) {
     const resultDiv = document.getElementById('mutationResult');
     
     let resultHTML = '';
-    const processingHTML = `
-        <p><strong>Обработка...</strong></p>
-        <p><i class="fas fa-spinner fa-spin"></i> Выполняется ${getTypeName(type)}</p>
-    `;
-    
-    resultDiv.innerHTML = processingHTML;
-    resultDiv.style.borderLeftColor = '#ff9800';
-
+    console.log(type);
     switch(type) {
         case 'find':
-            restorePage();
-            backupPage();
-            result = Find(data.position);
             resultHTML = `
                 <p><strong>Результат поиска</strong></p>
-                <p>Найдено в экзоне: <strong>Экзон ${result.exon_number}</strong></p>
-                <p>Нуклеотид: <strong>${result.nucleotide}</strong></p>
-                <p>Найдено в домене: <strong>Домен ${result.domain_name}</strong></p>
-                <p>Аминокислота: <strong>${result.aminoacid}</strong></p>
+                <p>Найдено в экзоне: <strong>Экзон ${apiResult.exon_number}</strong></p>
+                <p>Нуклеотид: <strong>${apiResult.nucleotide}</strong></p>
+                <p>Найдено в домене: <strong>Домен ${apiResult.domain_name}</strong></p>
+                <p>Аминокислота: <strong>${apiResult.aminoacid}</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
             `;
             break;
-                
+
         case 'substitution':
-            restorePage();
-            backupPage();
-            Substitution(data.position, data.sequence);
+        Substitution(parseInt(data.position), data.sequence.toUpperCase(), apiResult.new_aminoacid);
             resultHTML = `
                 <p><strong>Замена выполнена</strong></p>
                 <p>Позиция: <strong>${data.position}</strong></p>
                 <p>Новый нуклеотид: <strong>${data.sequence}</strong></p>
+                <p>Новая аминокислота: <strong>${apiResult.new_aminoacid}</strong></p>
                 <p>Статус: <strong>Успешно</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Замена применена</p>
             `;
             break;
-                
+            
         case 'insertion':
             resultHTML = `
                 <p><strong>Вставка выполнена</strong></p>
@@ -524,31 +513,68 @@ function showResult(type, data) {
                 <p class="success"><i class="fas fa-check-circle"></i> Вставка применена</p>
             `;
             break;
-                
+            
         case 'deletion':
             resultHTML = `
                 <p><strong>Удаление выполнено</strong></p>
                 <p>Диапазон: <strong>${data.startPos} - ${data.endPos}</strong></p>
-                <p>Удалено нуклеотидов: <strong>${parseInt(data.endPos) - parseInt(data.startPos) + 1}</strong></p>
+                <p>Удалены нуклеотиды: <strong>${1}</strong></p>
                 <p>Статус: <strong>Успешно</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Удаление применено</p>
             `;
             break;
-                
+            
         case 'exon_deletion':
             resultHTML = `
                 <p><strong>Экзон удален</strong></p>
-                <p>Удаленный экзон: <strong>Экзон ${data.exon}</strong></p>
-                ${data.position ? `<p>Позиция в экзоне: <strong>${data.position}</strong></p>` : ''}
+                <p>Удаленный экзон: <strong>Экзон ${apiResult.number_exon}</strong></p>
                 <p>Статус: <strong>Успешно</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Экзон удален</p>
             `;
             break;
     }
-        
+    
     resultDiv.innerHTML = resultHTML;
     resultDiv.style.borderLeftColor = '#28a745';
 }
+
+// 1)
+async function handleApplyMutationWithApi() {
+    const activeType = document.querySelector('.mutation-type-option.active')?.dataset.type;
+    const resultDiv = document.getElementById('mutationResult');
+    
+    // Получаем значения полей
+    const data = getMutationFormData(activeType);
+    
+    // Валидация
+    // if (!validateInputs(activeType, data)) {
+    //    return;
+    // }
+    
+    // Показываем сообщение о начале обработки
+    resultDiv.innerHTML = `
+        <p><strong>Обработка...</strong></p>
+        <p><i class="fas fa-spinner fa-spin"></i> Выполняется ${getTypeName(activeType)}</p>
+    `;
+    resultDiv.style.borderLeftColor = '#ff9800';
+    
+    try {
+        // Вызываем API
+        const apiResult = await applyMutation(activeType, data);
+
+        if (apiResult.success) {
+            // Отображаем результат от API
+            showResult(activeType, data, apiResult.data);
+        } else {
+            // Показываем ошибку
+            showError(apiResult.error);
+        }
+        
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
 
 // Получить название типа
 function getTypeName(type) {

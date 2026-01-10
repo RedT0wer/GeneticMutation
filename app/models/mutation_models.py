@@ -48,12 +48,24 @@ class SubstitutionResult(BaseMutationResult):
     """Результат замены нуклеотида"""
     new_aminoacid: str
 
+    def to_dict(self):
+        return {
+            "new_aminoacid" : self.new_aminoacid,    
+        }
+
 @dataclass
 class InsertionResult(BaseMutationResult):
     """Результат вставки нуклеотида"""
     new_domain: ProteinDomain
     different_position: int
     stop_codon_position: int
+
+    def to_dict(self):
+        return {
+            "new_domain" : self.new_domain.to_dict(),
+            "different_position" : self.different_position,
+            "stop_codon_position" : self.stop_codon_position,
+        }
 
 @dataclass
 class DeletionResult(BaseMutationResult):
@@ -62,9 +74,23 @@ class DeletionResult(BaseMutationResult):
     different_position: int
     stop_codon_position: int
 
+    def to_dict(self):
+        return {
+            "new_domain" : self.new_domain.to_dict(),
+            "different_position" : self.different_position,
+            "stop_codon_position" : self.stop_codon_position,
+        }
+
 @dataclass
 class ExonDeletionResult(BaseMutationResult):
     """Результат удаления экзона"""
     new_domain: ProteinDomain
     different_position: int
     stop_codon_position: int
+
+    def to_dict(self):
+        return {
+            "new_domain" : self.new_domain.to_dict(),
+            "different_position" : self.different_position,
+            "stop_codon_position" : self.stop_codon_position,
+        }

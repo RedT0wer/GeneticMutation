@@ -6,6 +6,11 @@ from .models.mutation_models import (
     SubstitutionMutation, InsertionMutation, 
     DeletionMutation, ExonDeletionMutation
 )
+from .models.gene_models import (
+    Exon, ProteinDomain, UTR,
+    BaseSequence, Protein,
+    Gene
+)
 from .utils.validators import Validators
 
 # Создаем blueprint для API
@@ -93,14 +98,11 @@ def apply_mutation():
         
         # Применяем мутацию
         result = mutation_service.apply_mutation(mutation, gene)
-        
-        # Преобразуем результат в словарь
-        result_dict = _mutation_result_to_dict(result)
-        
+
         return jsonify({
             'success': True,
-            'mutation_result': result_dict,
-            'mutation_type': mutation.mutation_type.value
+            'data': result.to_dict(),
+            'type': mutation.mutation_type.value,
         }), 200
         
     except ValueError as e:
@@ -239,74 +241,105 @@ def _gene_to_dict(gene):
 
 def _dict_to_gene(gene_dict):
     """
-    Преобразовать словарь обратно в объект Gene
-    (упрощенная версия, в реальном проекте нужна полная реализация)
+    Преобразовать словарь обратно в объект Gene.
     """
-    # Для простоты возвращаем исходный словарь
-    # В реальном проекте здесь нужно создать объекты моделей
-    return gene_dict
+    if not gene_dict:
+        return None
+
+    # Создаем объекты для доменов
+    domains = [
+        ProteinDomain(
+            name=domain['name'],
+            start=domain['start'],
+            end=domain['end'],
+            sequence=domain['sequence'],
+            type=domain['type']
+        ) for domain in gene_dict['protein']['domains']
+    ]
+    
+    # Создаем объект Protein
+    protein = Protein(
+        identifier=gene_dict['protein']['identifier'],
+        sequence=gene_dict['protein']['sequence'],
+        length=gene_dict['protein']['length'],
+        domains=domains
+    )
+    
+    # Создаем объекты для экзонов
+    exons = [
+        Exon(
+            number=exon['number'],
+            start_position=exon['start_position'],
+            end_position=exon['end_position'],
+            start_phase=exon['start_phase'],
+            end_phase=exon['end_phase'],
+            length=exon['length']
+        ) for exon in gene_dict['base_sequence']['exons']
+    ]
+
+    # Создаем объект UTR
+    utr5 = UTR(
+        sequence=gene_dict['base_sequence']['utr5']['sequence'],
+        start_position=gene_dict['base_sequence']['utr5']['start_position'],
+        end_position=gene_dict['base_sequence']['utr5']['end_position'],
+        length=gene_dict['base_sequence']['utr5']['length']
+    )
+
+    utr3 = UTR(
+        sequence=gene_dict['base_sequence']['utr3']['sequence'],
+        start_position=gene_dict['base_sequence']['utr3']['start_position'],
+        end_position=gene_dict['base_sequence']['utr3']['end_position'],
+        length=gene_dict['base_sequence']['utr3']['length']
+    )
+
+    # Создаем объект BaseSequence
+    base_sequence = BaseSequence(
+        identifier=gene_dict['base_sequence']['identifier'],
+        length=gene_dict['base_sequence']['length'],
+        full_sequence=gene_dict['base_sequence']['full_sequence'],
+        exons=exons,
+        utr5=utr5,
+        utr3=utr3
+    )
+
+    # Создаем и возвращаем объект Gene
+    return Gene(
+        protein=protein,
+        base_sequence=base_sequence
+    )
 
 def _create_mutation_object(mutation_data):
     """
     Создать объект мутации из данных
     """
-    mutation_type_str = mutation_data.get('mutation_type')
+    mutation_type = mutation_data.get('mutation_type')
     
-    try:
-        mutation_type = MutationType(mutation_type_str)
-    except ValueError:
-        return None
-    
-    if mutation_type == MutationType.SUBSTITUTION:
+    if mutation_type == MutationType.SUBSTITUTION.name:
         return SubstitutionMutation(
-            mutation_type=mutation_type,
+            mutation_type=MutationType.SUBSTITUTION,
             new_nucleotide=mutation_data.get('new_nucleotide'),
             position_nucleotide=mutation_data.get('position_nucleotide')
         )
-    elif mutation_type == MutationType.INSERTION:
+    elif mutation_type == MutationType.INSERTION.name:
         return InsertionMutation(
-            mutation_type=mutation_type,
+            mutation_type=MutationType.INSERTION,
             inserted_sequence=mutation_data.get('inserted_sequence'),
             start_position=mutation_data.get('start_position'),
             end_position=mutation_data.get('end_position')
         )
-    elif mutation_type == MutationType.DELETION:
+    elif mutation_type == MutationType.DELETION.name:
         return DeletionMutation(
-            mutation_type=mutation_type,
+            mutation_type=MutationType.DELETION,
             start_position=mutation_data.get('start_position'),
             end_position=mutation_data.get('end_position')
         )
-    elif mutation_type == MutationType.EXON_DELETION:
+    elif mutation_type == MutationType.EXON_DELETION.name:
         return ExonDeletionMutation(
-            mutation_type=mutation_type,
+            mutation_type=MutationType.EXON_DELETION,
             nucleotide_position=mutation_data.get('nucleotide_position')
         )
     
     return None
-
-def _mutation_result_to_dict(result):
-    """
-    Преобразовать результат мутации в словарь
-    """
-    if hasattr(result, 'new_aminoacid'):
-        return {
-            'type': 'substitution',
-            'new_aminoacid': result.new_aminoacid
-        }
-    elif hasattr(result, 'new_domain'):
-        return {
-            'type': result.__class__.__name__.replace('Result', '').lower(),
-            'new_domain': {
-                'name': result.new_domain.name,
-                'start': result.new_domain.start,
-                'end': result.new_domain.end,
-                'sequence': result.new_domain.sequence,
-                'type': result.new_domain.type
-            },
-            'different_position': result.different_position,
-            'stop_codon_position': result.stop_codon_position
-        }
-    return {}
 
 def _get_mutation_description(mutation_type):
     """

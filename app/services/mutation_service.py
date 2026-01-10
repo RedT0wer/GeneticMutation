@@ -30,7 +30,7 @@ class MutationStrategy:
     def _get_protein_domain_at_position(self, gene: Gene, nucleotide_position: int) -> ProteinDomain:
         """Получить белковые домены по позиции нуклеотида"""
         aminoacid_position = nucleotide_position // 3
-        for domain in gene.translated_protein.domains:
+        for domain in gene.protein.domains:
             if domain.start <= aminoacid_position <= domain.end:
                 return domain
 
