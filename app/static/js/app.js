@@ -186,11 +186,13 @@ function displayDomains(domains) {
     // Создаем DocumentFragment для более эффективного добавления
     const fragment = document.createDocumentFragment();
     
-    domains.forEach(domain => {
+    for(let i = 0; i < domains.length; i++) {
+        domain = domains[i];
         const domainLength = domain.end - domain.start + 1;
         
         const domainData = {
-            ...domain
+            ...domain,
+            number: i+1,
         };
         
         // Создаем HTML домена
@@ -236,7 +238,7 @@ function displayDomains(domains) {
         
         // Добавляем домен во фрагмент
         fragment.appendChild(domainElement);
-    });
+    };
     
     // Добавляем все домены на страницу за одну операцию
     container.appendChild(fragment);
