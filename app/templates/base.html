@@ -41,7 +41,7 @@
         <span 
             title="Номер нуклеотида: <%= position_nucleotide %>&#010;Номер кодона: <%= number_codon %>&#010;Область: <%= region %>"
             class="<%= classes %>"
-            data-position="<%= position_nucleotide %>"
+            data-position-nucleotide="<%= position_nucleotide %>"
             data-codon="<%= number_codon %>"
             data-is-coding="<%= isCoding %>"
             data-is-utr="<%= isUtr %>" >
@@ -71,7 +71,7 @@
     <script type="text/template" id="aminoacidTemplate">
         <span 
             title="Номер аминокислоты: <%= position_aminoacid %>"
-            data-position="<%= position_aminoacid %>" >
+            data-position-aminoacid="<%= position_aminoacid %>" >
             <%= aminoacid %> 
         </span>
     </script>

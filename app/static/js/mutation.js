@@ -353,74 +353,36 @@ function showError(message) {
     }
 }
 
-function FindExon(position) {
-    const element = document.querySelector(`[data-position="${position}"]`);
-    element.classList.add("find");
+function Find(position) {
+    nucleotide = FindNucleotide(position);
+    nucleotide.classList.add("find");
+    sequence_content = nucleotide.parentNode;
+    exon = sequence_content.parentNode;
+    exon_number = exon.getAttribute("data-exon-number");
+
+    aminoacid = FindAminoacid(position);
+    aminoacid.classList.add("find");
+    sequence_content = aminoacid.parentNode;
+    domain = sequence_content.parentNode;
+    domain_number = domain.getAttribute("data-domain-number");
+
+    result = {
+        "nucleotide": nucleotide.innerText,
+        "aminoacid": aminoacid.innerText,
+        "exon_number": exon_number,
+        "domain_number": domain_number,
+    };
+
+    return result;
 }
 
-function FindDomain(position) {
-    const current_domains = currentGene.protein.domains;
-    positon = parseInt((parseInt(position) - 1) / 3);
-
-    for(const domain of current_domains) {
-        console.log(domain.name);
-        if (domain.start <= position && position <= domain.end) {            
-            return [domain.name, position - domain.start];
-        }
-    }
+function FindNucleotide(position) {
+    return document.querySelector(`[data-position-nucleotide="${position}"]`);
 }
 
-function ShowFindExon(exon_number, position) {
-    element = document.querySelector(`[data-exon-number="${exon_number}"]`);
-    element = element.getElementsByClassName('sequence-content')[0];
-    if (element.childElementCount == 2) {
-        element_utr = element.getElementsByClassName('utr')[0];
-        position = position - element_utr.textContent.trim().length;
-    }
-    codingSequenceElement = element.getElementsByClassName('coding')[0];
-    sequence = codingSequenceElement.textContent.trim();
-    
-    // Разделяем последовательность
-    before = sequence.slice(0, position);
-    atPosition = sequence.charAt(position);
-    after = sequence.slice(position + 1);
-
-    // Создаем новые spans
-    beforeSpan = document.createElement('span');
-    atPositionSpan = document.createElement('span');
-    afterSpan = document.createElement('span');
-
-    beforeSpan.textContent = before;
-    atPositionSpan.textContent = atPosition;
-    atPositionSpan.classList.add("find");
-    afterSpan.textContent = after;
-
-    // Очищаем оригинальный элемент и добавляем новые
-    codingSequenceElement.innerHTML = ''; // Очищаем содержимое
-    codingSequenceElement.appendChild(beforeSpan);
-    codingSequenceElement.appendChild(atPositionSpan);
-    codingSequenceElement.appendChild(afterSpan);
-
-    // Эмулируем нажатие клавиши Escape
-    const escapeEvent = new KeyboardEvent('keydown', {
-        key: 'Escape',
-        keyCode: 27,
-        code: 'Escape',
-        which: 27,
-        bubbles: true,
-    });
-    document.dispatchEvent(escapeEvent);
-
-    // Прокручиваем страницу к созданному элементу
-    const rect = codingSequenceElement.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-    const scrollTop = window.scrollY;
-
-    // Вычисляем новую позицию для прокрутки
-    const newScrollTop = scrollTop + rect.top - (windowHeight / 2 - rect.height / 2);
-    window.scrollTo({ top: newScrollTop, behavior: 'smooth' });
-
-    return atPosition;
+function FindAminoacid(position) {
+    position = parseInt((parseInt(position) - 1) / 3) + 1;
+    return document.querySelector(`[data-position-aminoacid="${position}"]`);
 }
 
 // Показать результат
@@ -435,67 +397,65 @@ function showResult(type, data) {
     
     resultDiv.innerHTML = processingHTML;
     resultDiv.style.borderLeftColor = '#ff9800';
-    
-    // Демонстрационный результат через 1.5 секунды
-    setTimeout(() => {
-        switch(type) {
-            case 'find':
-                restorePage();
-                backupPage();
-                FindExon(data.position);
-                resultHTML = `
-                    <p><strong>Результат поиска</strong></p>
-                    <p>Найдено в экзоне: <strong>Экзон ${1}</strong></p>
-                    <p>Нуклеотид: <strong>${1}</strong></p>
-                    <p>Найдено в домене: <strong>Домен ${1}</strong></p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
-                `;
-                break;
+
+    switch(type) {
+        case 'find':
+            restorePage();
+            backupPage();
+            result = Find(data.position);
+            resultHTML = `
+                <p><strong>Результат поиска</strong></p>
+                <p>Найдено в экзоне: <strong>Экзон ${result.exon_number}</strong></p>
+                <p>Нуклеотид: <strong>${result.nucleotide}</strong></p>
+                <p>Найдено в домене: <strong>Домен ${result.domain_number}</strong></p>
+                <p>Аминокислота: <strong>${result.aminoacid}</strong></p>
+                <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
+            `;
+            break;
                 
-            case 'substitution':
-                resultHTML = `
-                    <p><strong>Замена выполнена</strong></p>
-                    <p>Позиция: <strong>${data.position}</strong></p>
-                    <p>Новый нуклеотид: <strong>${data.sequence}</strong></p>
-                    <p>Статус: <strong>Успешно</strong></p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Замена применена</p>
-                `;
-                break;
+        case 'substitution':
+            resultHTML = `
+                <p><strong>Замена выполнена</strong></p>
+                <p>Позиция: <strong>${data.position}</strong></p>
+                <p>Новый нуклеотид: <strong>${data.sequence}</strong></p>
+                <p>Статус: <strong>Успешно</strong></p>
+                <p class="success"><i class="fas fa-check-circle"></i> Замена применена</p>
+            `;
+            break;
                 
-            case 'insertion':
-                resultHTML = `
-                    <p><strong>Вставка выполнена</strong></p>
-                    <p>Между позициями: <strong>${data.insertPos} и ${parseInt(data.insertPos) + 1}</strong></p>
-                    <p>Вставленная последовательность: <strong>${data.sequence}</strong></p>
-                    <p>Длина: <strong>${data.sequence.length} нуклеотидов</strong></p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Вставка применена</p>
-                `;
-                break;
+        case 'insertion':
+            resultHTML = `
+                <p><strong>Вставка выполнена</strong></p>
+                <p>Между позициями: <strong>${data.insertPos} и ${parseInt(data.insertPos) + 1}</strong></p>
+                <p>Вставленная последовательность: <strong>${data.sequence}</strong></p>
+                <p>Длина: <strong>${data.sequence.length} нуклеотидов</strong></p>
+                <p class="success"><i class="fas fa-check-circle"></i> Вставка применена</p>
+            `;
+            break;
                 
-            case 'deletion':
-                resultHTML = `
-                    <p><strong>Удаление выполнено</strong></p>
-                    <p>Диапазон: <strong>${data.startPos} - ${data.endPos}</strong></p>
-                    <p>Удалено нуклеотидов: <strong>${parseInt(data.endPos) - parseInt(data.startPos) + 1}</strong></p>
-                    <p>Статус: <strong>Успешно</strong></p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Удаление применено</p>
-                `;
-                break;
+        case 'deletion':
+            resultHTML = `
+                <p><strong>Удаление выполнено</strong></p>
+                <p>Диапазон: <strong>${data.startPos} - ${data.endPos}</strong></p>
+                <p>Удалено нуклеотидов: <strong>${parseInt(data.endPos) - parseInt(data.startPos) + 1}</strong></p>
+                <p>Статус: <strong>Успешно</strong></p>
+                <p class="success"><i class="fas fa-check-circle"></i> Удаление применено</p>
+            `;
+            break;
                 
-            case 'exon_deletion':
-                resultHTML = `
-                    <p><strong>Экзон удален</strong></p>
-                    <p>Удаленный экзон: <strong>Экзон ${data.exon}</strong></p>
-                    ${data.position ? `<p>Позиция в экзоне: <strong>${data.position}</strong></p>` : ''}
-                    <p>Статус: <strong>Успешно</strong></p>
-                    <p class="success"><i class="fas fa-check-circle"></i> Экзон удален</p>
-                `;
-                break;
-        }
+        case 'exon_deletion':
+            resultHTML = `
+                <p><strong>Экзон удален</strong></p>
+                <p>Удаленный экзон: <strong>Экзон ${data.exon}</strong></p>
+                ${data.position ? `<p>Позиция в экзоне: <strong>${data.position}</strong></p>` : ''}
+                <p>Статус: <strong>Успешно</strong></p>
+                <p class="success"><i class="fas fa-check-circle"></i> Экзон удален</p>
+            `;
+            break;
+    }
         
-        resultDiv.innerHTML = resultHTML;
-        resultDiv.style.borderLeftColor = '#28a745';
-    }, 1500);
+    resultDiv.innerHTML = resultHTML;
+    resultDiv.style.borderLeftColor = '#28a745';
 }
 
 // Получить название типа
