@@ -364,13 +364,13 @@ function Find(position) {
     aminoacid.classList.add("find");
     sequence_content = aminoacid.parentNode;
     domain = sequence_content.parentNode;
-    domain_number = domain.getAttribute("data-domain-number");
+    domain_name = domain.getAttribute("data-domain-name");
 
     result = {
         "nucleotide": nucleotide.innerText,
         "aminoacid": aminoacid.innerText,
         "exon_number": exon_number,
-        "domain_number": domain_number,
+        "domain_name": domain_name,
     };
 
     return result;
@@ -407,7 +407,7 @@ function showResult(type, data) {
                 <p><strong>Результат поиска</strong></p>
                 <p>Найдено в экзоне: <strong>Экзон ${result.exon_number}</strong></p>
                 <p>Нуклеотид: <strong>${result.nucleotide}</strong></p>
-                <p>Найдено в домене: <strong>Домен ${result.domain_number}</strong></p>
+                <p>Найдено в домене: <strong>Домен ${result.domain_name}</strong></p>
                 <p>Аминокислота: <strong>${result.aminoacid}</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Поиск завершен</p>
             `;
