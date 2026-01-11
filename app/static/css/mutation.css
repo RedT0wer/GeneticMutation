@@ -259,7 +259,8 @@
 }
 
 /* Стили для мутаций */
-.find, .substitution, .insertion {
+.find, .substitution, .insertion, .deletion {
+    background: #90d4d4;
     color: red;
 }
 

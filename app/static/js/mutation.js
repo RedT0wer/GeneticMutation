@@ -409,6 +409,41 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
     updateStyleAminoacid(number, different_position);
 }
 
+function Deletion(startPos, endPos, stop_codon_pos, new_domain, different_position) {
+    // 1. Обновляем нуклеотиды и данные экзона после позиции вставки
+    const r = updateNucleotidesAfterInsertion(endPos, -(endPos - startPos + 1), stop_codon_pos + 3);
+    
+    last_pos = r.newPos; 
+    last_nucleotide = r.element;
+
+    // 2. Обновляем позиции экзонов
+    updatePositionExon(startPos, last_pos);
+
+    // 3. Обновляем стиль для удаленных
+    updateStyleNucleotide(startPos, endPos);
+
+    // 4. Скрываем все после стоп-кодона
+    hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
+    
+    // 5. Скрыть все домены после
+    hideDomain(endPos);
+
+    // 6. Вставить новый домен
+    number = insertNewDomain(startPos, new_domain);
+
+    // 7. Присвоить стиль разным аминокислотым
+    updateStyleAminoacid(number, different_position);
+}
+
+function updateStyleNucleotide(startPos, endPos) {
+    nucleotide = document.querySelector(`span[data-position-nucleotide="${startPos}"]`);
+    while (startPos <= endPos) {
+        nucleotide.classList.add("deletion");
+        nucleotide = nucleotide.nextElementSibling;
+        startPos++;
+    }
+}
+
 function hideDomain(insertPos) {
     aminoacid = FindAminoacid(insertPos);
     domain_card = aminoacid.parentNode.parentNode;
@@ -477,12 +512,6 @@ function updatePositionExon(insertPos, last_pos) {
     }
 }
 
-/**
- * Обновляет нуклеотиды после позиции вставки
- * @param {number} insertPos - Позиция вставки
- * @param {number} insertLength - Длина вставляемой последовательности
- * @param {number} stopCodonPos - Позиция стоп-кодона
- */
 function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) {
     const nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
     
@@ -517,11 +546,6 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
     }
 }
 
-/**
- * Обновляет класс кодона элемента
- * @param {HTMLElement} element - Нуклеотидный элемент
- * @param {number} codonNumber - Номер кодона
- */
 function updateCodonClass(element, codonNumber) {
     element.classList.remove("first_codon", "second_codon");
     
@@ -532,12 +556,6 @@ function updateCodonClass(element, codonNumber) {
     }
 }
 
-/**
- * Создает и вставляет новые нуклеотиды
- * @param {number} insertPos - Позиция вставки
- * @param {string} sequence - Последовательность для вставки
- * @param {HTMLElement} referenceElement - Элемент, после которого вставляем
- */
 function insertNewNucleotides(insertPos, sequence, referenceElement) {
     let currentElement = referenceElement;
     
@@ -566,10 +584,6 @@ function insertNewNucleotides(insertPos, sequence, referenceElement) {
     }
 }
 
-/**
- * Скрывает экзоны и нуклеотиды после стоп-кодона
- * @param {number} stopCodonPos - Позиция стоп-кодона
- */
 function hideExonsAndNucleotidesAfterStopCodon(last_nucleotide) {
     // Находим текущий экзон
     const currentExon = last_nucleotide.parentNode.parentNode;
@@ -737,6 +751,7 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'deletion':
+            Deletion(parseInt(data.startPos), parseInt(data.endPos), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position)
             resultHTML = `
                 <p><strong>Удаление выполнено</strong></p>
                 <p>Диапазон: <strong>${data.startPos} - ${data.endPos}</strong></p>
