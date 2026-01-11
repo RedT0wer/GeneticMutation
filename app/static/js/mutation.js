@@ -435,8 +435,53 @@ function Deletion(startPos, endPos, stop_codon_pos, new_domain, different_positi
     updateStyleAminoacid(number, different_position);
 }
 
+function ExonDeletion(position, stop_codon_pos, new_domain, different_position) {
+    nucleotide = findNucleotideAtPosition(position);
+    current_exon = nucleotide.parentNode.parentNode;
+    st = parseInt(current_exon.getAttribute("data-exon-start-pos"));
+    end = parseInt(current_exon.getAttribute("data-exon-end-pos"));
+    console.log(current_exon, st, end);
+    // 1. Обновляем нуклеотиды и данные экзона после позиции вставки
+    const r = updateNucleotidesAfterInsertion(end, -(end - st + 1), stop_codon_pos + (currentGene.base_sequence.utr5.length));
+    
+    last_pos = r.newPos; 
+    last_nucleotide = r.element;
+    console.log(last_pos, last_nucleotide);
+
+    // 2. Обновляем позиции экзонов
+    updatePositionExon(end, last_pos);
+
+    // 3. Обновляем стиль для удаленных
+    updateStyleNucleotideExon(current_exon);
+
+    // 4. Скрываем все после стоп-кодона
+    hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
+    
+    // 5. Скрыть все домены после
+    hideDomain(end);
+
+    // 6. Вставить новый домен
+    number = insertNewDomain(st, new_domain);
+
+    // 7. Присвоить стиль разным аминокислотым
+    updateStyleAminoacid(number, different_position);
+}
+
+function updateStyleNucleotideExon(exon) {
+    startPos = parseInt(current_exon.getAttribute("data-exon-start-pos"));
+    endPos = parseInt(current_exon.getAttribute("data-exon-end-pos"));
+
+    nucleotide = exon.querySelector(`span[data-position-nucleotide="${startPos}"]`);
+    while (startPos <= endPos) {
+        nucleotide.classList.add("deletion");
+        nucleotide = nucleotide.nextElementSibling;
+        startPos++;
+    }
+}
+
 function updateStyleNucleotide(startPos, endPos) {
     nucleotide = document.querySelector(`span[data-position-nucleotide="${startPos}"]`);
+
     while (startPos <= endPos) {
         nucleotide.classList.add("deletion");
         nucleotide = nucleotide.nextElementSibling;
@@ -522,6 +567,7 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
         if (currentPos > insertPos) {
             // Обновляем позицию
             const newPos = currentPos + insertLength;
+            //console.log(currentPos, newPos, i, stopCodonPos);
             element.setAttribute("data-position-nucleotide", newPos);
 
             // Обновляем номер кодона
@@ -762,9 +808,10 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'exon_deletion':
+            ExonDeletion(parseInt(data.position), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position);
             resultHTML = `
                 <p><strong>Экзон удален</strong></p>
-                <p>Удаленный экзон: <strong>Экзон ${apiResult.number_exon}</strong></p>
+                <p>Удаленный экзон: <strong>Экзон ${data.position}</strong></p>
                 <p>Статус: <strong>Успешно</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Экзон удален</p>
             `;
@@ -812,7 +859,6 @@ async function handleApplyMutationWithApi() {
     }
 }
 
-
 // Получить название типа
 function getTypeName(type) {
     const names = {
@@ -837,6 +883,8 @@ document.getElementById('resetMutation')?.addEventListener('click', function() {
         firstType.classList.add('active');
         updateMutationForm('find');
     }
+
+    restorePage();
 });
 
 // Супер-мини версия

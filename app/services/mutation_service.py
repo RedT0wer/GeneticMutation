@@ -233,9 +233,11 @@ class ExonDeletionStrategy(SequenceMutationStrategy):
         else:
             stop_codon_pos = translation_start + (len(translated_result) - 1) * 3
 
+        sequence=protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result
+
         # Находим позицию, с которой началась мутация
         diff_pos = (translation_start - gene.base_sequence.utr5.length) // 3
-        while diff_pos < len(translated_result) and translated_result[diff_pos] == gene.protein.sequence[diff_pos]:
+        while diff_pos < len(sequence) + protein_domain.start and sequence[diff_pos - protein_domain.start] == gene.protein.sequence[diff_pos]:
             diff_pos += 1
 
         # Создаем новый домен
@@ -243,7 +245,7 @@ class ExonDeletionStrategy(SequenceMutationStrategy):
             name=f"{protein_domain.name}_mutated",
             start=0,
             end=len(translated_result) - 1,
-            sequence=protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result,
+            sequence=sequence,
             type=protein_domain.type
         )
         
