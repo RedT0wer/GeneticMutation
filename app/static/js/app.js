@@ -126,9 +126,9 @@ function createNucleotidesFragment(exonSequence, startPosition, utr5End, utr3Sta
     for (let i = 0; i < exonSequence.length; i++) {
         const nucleotide = exonSequence[i];
         const { globalPosition, numberCodon, isUtr, isCoding, region } = calculateNucleotideProperties(startPosition, i, utr5End, utr3Start);
-        
+        classCodon = (numberCodon % 2) ? 'first_codon' : 'second_codon';
         const nucleotideData = {
-            classes: isUtr ? 'utr' : 'coding',
+            classes: isUtr ? 'utr' : 'coding' + ' ' + classCodon,
             position_nucleotide: isUtr ? -1 : globalPosition,
             number_codon: isUtr ? -1 : numberCodon,
             isUtr: isUtr,

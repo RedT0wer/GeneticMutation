@@ -449,6 +449,14 @@ select.form-control {
     color: #2d3748;
 }
 
+.first_codon {
+    background: #ced6e8;
+}
+
+.second_codon {
+    background: #90c690;
+}
+
 /* Визуализация */
 .visual-block {
     background: white;

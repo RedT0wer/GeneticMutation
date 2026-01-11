@@ -379,6 +379,7 @@ function Substitution(position, new_nucleotide, new_aminoacid) {
 function Insertion(insertPos, sequence, stop_codon_pos) {
     nucleotide = FindNucleotide(insertPos);
 
+    // Перерасчет последующих нуклеотидов
     nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
     for(let i = 0; i < nucleotides.length; i++) {
         element = nucleotides[i];
@@ -387,6 +388,10 @@ function Insertion(insertPos, sequence, stop_codon_pos) {
             element.setAttribute("data-position-nucleotide", value + sequence.length);
             number_codon = parseInt((value + sequence.length - 1) / 3) + 1;
             element.setAttribute("title", `Номер нуклеотида: ${value + sequence.length}\nНомер кодона: ${number_codon}\nОбласть: кодирующая`);
+            
+            classCodon = (number_codon % 2) ? 'first_codon' : 'second_codon';
+            element.className = '';
+            element.classList.add(classCodon);
 
             if (i - 1 > stop_codon_pos - 3) {
                 element.classList.add("stop_codon");
@@ -397,6 +402,7 @@ function Insertion(insertPos, sequence, stop_codon_pos) {
         }
     }
 
+    // Добавление новых нуклеотидов
     for(let i = 0; i < sequence.length; i++) {
         const nucleotideData = {
             classes: 'coding insertion',
@@ -409,19 +415,17 @@ function Insertion(insertPos, sequence, stop_codon_pos) {
         };
         
         nucleotideElement = createNucleotideElement(nucleotideData);
-        
+
+        classCodon = (((insertPos - 1) / 3 + 1) % 2) ? 'first_codon' : 'second_codon';
+        nucleotideElement.classList.add(classCodon);
+
         nucleotide.after(nucleotideElement);
         nucleotide = nucleotideElement;
     }
 
-
-    // nucleotide.after(new_nucleotides);
-
-    // domainData = {
-    //     ...domain,
-    //     number_domain: number_domain,
-    // }
-    // domainElement = displayDomain(domainData);
+    // Перерасчет позиций экзонов
+    nucleotide = FindNucleotide(insertPos);
+    exon = nucleotide.parentNode.parentNode;
 }
 
 // 3
