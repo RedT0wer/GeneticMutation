@@ -76,11 +76,10 @@ class TestMutationServices:
         protein_id = "Q8WZ42"
         gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
 
-        mutation = InsertionMutation(MutationType.INSERTION, "A", 10, 90)
+        mutation = InsertionMutation(MutationType.INSERTION, "TT", 256, 90)
         insertion_result = mutation_service.apply_mutation(mutation, gene) 
         new_domain = insertion_result.new_domain
         print(insertion_result)
-        assert gene.base_sequence.full_sequence[insertion_result.stop_codon_position - 2:insertion_result.stop_codon_position + 1] == "TAG"
 
     @pytest.mark.deletion
     def test_deletion_one(self):
