@@ -383,6 +383,8 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
         return;
     }
 
+    stop_codon_pos = stop_codon_pos - (sequence.length - 1);
+
     // 2. Обновляем нуклеотиды и данные экзона после позиции вставки
     last_pos = updateNucleotidesAfterInsertion(insertPos, sequence.length, stop_codon_pos);
 
@@ -468,7 +470,7 @@ function updatePositionExon(insertPos, last_pos) {
         exon_meta = exon.querySelectorAll("span[class='position-badge']");
         exon_meta_pos = exon_meta[0];
         exon_meta_pos.textContent = `Позиция: ${exon.getAttribute("data-exon-start-pos")}-${exon.getAttribute("data-exon-end-pos")}`;
-         exon_meta_pos = exon_meta[1];
+        exon_meta_pos = exon_meta[1];
         exon_meta_pos.textContent = `Длина: ${exon.getAttribute("data-exon-end-pos") - exon.getAttribute("data-exon-start-pos") + 1}`;
     }
 }
@@ -490,7 +492,7 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
             // Обновляем позицию
             const newPos = currentPos + insertLength;
             element.setAttribute("data-position-nucleotide", newPos);
-            
+
             // Обновляем номер кодона
             const codonNumber = parseInt((newPos - 1) / 3) + 1;
             element.setAttribute("data-codon", codonNumber);
@@ -535,13 +537,14 @@ function updateCodonClass(element, codonNumber) {
  * @param {HTMLElement} referenceElement - Элемент, после которого вставляем
  */
 function insertNewNucleotides(insertPos, sequence, referenceElement) {
-    const codonNumber = parseInt((insertPos - 1) / 3) + 1;
     let currentElement = referenceElement;
     
     for(let i = 0; i < sequence.length; i++) {
+        position_nucleotide = insertPos + 1 + i;
+        codonNumber = parseInt((position_nucleotide - 1) / 3) + 1;
         const nucleotideData = {
             classes: '',
-            position_nucleotide: insertPos + 1 + i,
+            position_nucleotide: position_nucleotide,
             number_codon: codonNumber,
             isUtr: false,
             isCoding: true,
