@@ -326,7 +326,7 @@ function showError(message) {
 }
 
 function Find(position) {
-    nucleotide = FindNucleotide(position);
+    nucleotide = findNucleotideAtPosition(position);
     nucleotide.classList.add("find");
     sequence_content = nucleotide.parentNode;
     exon = sequence_content.parentNode;
@@ -352,18 +352,17 @@ function Find(position) {
     };
 }
 
-function FindNucleotide(position) {
+function findNucleotideAtPosition(position) {
     return document.querySelector(`[data-position-nucleotide="${position}"]`);
 }
 
 function FindAminoacid(position) {
     position = parseInt((parseInt(position) - 1) / 3) + 1;
-    console.log(position);
     return document.querySelector(`[data-position-aminoacid="${position}"]`);
 }
 
 function Substitution(position, new_nucleotide, new_aminoacid) {
-    nucleotide = FindNucleotide(position);
+    nucleotide = findNucleotideAtPosition(position);
     nucleotide.classList.add("substitution");
     new_nucleotide_element = nucleotide.cloneNode(true);
     new_nucleotide_element.innerText = "(" + new_nucleotide + ")";
@@ -377,55 +376,168 @@ function Substitution(position, new_nucleotide, new_aminoacid) {
 }
 
 function Insertion(insertPos, sequence, stop_codon_pos) {
-    nucleotide = FindNucleotide(insertPos);
-
-    // Перерасчет последующих нуклеотидов
-    nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
-    for(let i = 0; i < nucleotides.length; i++) {
-        element = nucleotides[i];
-        value = parseInt(element.getAttribute("data-position-nucleotide"));
-        if (value > insertPos) {
-            element.setAttribute("data-position-nucleotide", value + sequence.length);
-            number_codon = parseInt((value + sequence.length - 1) / 3) + 1;
-            element.setAttribute("title", `Номер нуклеотида: ${value + sequence.length}\nНомер кодона: ${number_codon}\nОбласть: кодирующая`);
-            
-            classCodon = (number_codon % 2) ? 'first_codon' : 'second_codon';
-            element.className = '';
-            element.classList.add(classCodon);
-
-            if (i - 1 > stop_codon_pos - 3) {
-                element.classList.add("stop_codon");
-            } 
-        }
-        if (i - 1 == stop_codon_pos) {
-            break;
-        }
+    // 1. Находим нуклеотид в позиции вставки
+    const insertionNucleotide = findNucleotideAtPosition(insertPos);
+    if (!insertionNucleotide) {
+        console.error(`Нуклеотид в позиции ${insertPos} не найден`);
+        return;
     }
 
-    // Добавление новых нуклеотидов
+    // 2. Обновляем нуклеотиды и данные экзона после позиции вставки
+    last_pos = updateNucleotidesAfterInsertion(insertPos, sequence.length, stop_codon_pos);
+
+    // 3. Обновляем позиции экзонов
+    updatePositionExon(insertPos, last_pos);
+
+    // 4. Вставляем новые нуклеотиды
+    insertNewNucleotides(insertPos, sequence, insertionNucleotide);
+
+    // 5. Скрываем все после стоп-кодона
+    hideExonsAndNucleotidesAfterStopCodon(last_pos);
+}
+
+function updatePositionExon(insertPos, last_pos) {
+    exons = document.querySelectorAll("div[class='exon-card']");
+    st_exon = findNucleotideAtPosition(insertPos).parentNode.parentNode;
+    st = parseInt(st_exon.getAttribute("data-exon-number")) - 1;
+    end_exon = findNucleotideAtPosition(last_pos).parentNode.parentNode;
+    end = parseInt(end_exon.getAttribute("data-exon-number")) - 1;
+    for(let i = st; i <= end; i++) {
+        exon = exons[i];
+        nucleotides = exon.querySelectorAll("span[data-position-nucleotide]");
+        first = nucleotides[0];
+        last = nucleotides[nucleotides.length - 1];
+        exon.setAttribute("data-exon-start-pos", Math.max(1, parseInt(first.getAttribute("data-position-nucleotide"))));
+
+        if (end_exon != exon) {
+            exon.setAttribute("data-exon-end-pos", parseInt(last.getAttribute("data-position-nucleotide")));
+        } else {
+            exon.setAttribute("data-exon-end-pos", parseInt(last_pos));
+        }
+
+        exon_meta = exon.querySelectorAll("span[class='position-badge']");
+        exon_meta_pos = exon_meta[0];
+        exon_meta_pos.textContent = `Позиция: ${exon.getAttribute("data-exon-start-pos")}-${exon.getAttribute("data-exon-end-pos")}`;
+         exon_meta_pos = exon_meta[1];
+        exon_meta_pos.textContent = `Длина: ${exon.getAttribute("data-exon-end-pos") - exon.getAttribute("data-exon-start-pos") + 1}`;
+    }
+}
+
+/**
+ * Обновляет нуклеотиды после позиции вставки
+ * @param {number} insertPos - Позиция вставки
+ * @param {number} insertLength - Длина вставляемой последовательности
+ * @param {number} stopCodonPos - Позиция стоп-кодона
+ */
+function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) {
+    const nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
+    // exon = findNucleotideAtPosition(insertPos).parentNode.parentNode;
+    // st = parseInt(exon.getAttribute("data-exon-start-pos")) + parseInt(currentGene.base_sequence.urt5.length);
+    // end = stopCodonPos - parseInt(currentGene.base_sequence.urt5.length);
+    
+    for(let i = 0; i < nucleotides.length; i++) {
+        element = nucleotides[i];
+        const currentPos = parseInt(element.getAttribute("data-position-nucleotide"));
+        
+        if (currentPos > insertPos) {
+            // Обновляем позицию
+            const newPos = currentPos + insertLength;
+            element.setAttribute("data-position-nucleotide", newPos);
+            
+            // Обновляем номер кодона
+            const codonNumber = parseInt((newPos - 1) / 3) + 1;
+            element.setAttribute("data-codon", codonNumber);
+            
+            // Обновляем title
+            element.setAttribute("title", 
+                `Номер нуклеотида: ${newPos}\nНомер кодона: ${codonNumber}\nОбласть: кодирующая`
+            );
+            
+            // Обновляем классы кодона
+            updateCodonClass(element, codonNumber);
+            
+            // Помечаем стоп-кодон если необходимо
+            if (i - 1 > stopCodonPos - 3 && i - 1 <= stopCodonPos) {
+                element.classList.add("stop_codon");
+            } else if (i - 1 > stopCodonPos) {
+                return newPos - 1;
+            }
+        }
+    }
+}
+
+/**
+ * Обновляет класс кодона элемента
+ * @param {HTMLElement} element - Нуклеотидный элемент
+ * @param {number} codonNumber - Номер кодона
+ */
+function updateCodonClass(element, codonNumber) {
+    element.classList.remove("first_codon", "second_codon");
+    
+    if (codonNumber % 2) {
+        element.classList.add("first_codon");
+    } else {
+        element.classList.add("second_codon");
+    }
+}
+
+/**
+ * Создает и вставляет новые нуклеотиды
+ * @param {number} insertPos - Позиция вставки
+ * @param {string} sequence - Последовательность для вставки
+ * @param {HTMLElement} referenceElement - Элемент, после которого вставляем
+ */
+function insertNewNucleotides(insertPos, sequence, referenceElement) {
+    const codonNumber = parseInt((insertPos - 1) / 3) + 1;
+    let currentElement = referenceElement;
+    
     for(let i = 0; i < sequence.length; i++) {
         const nucleotideData = {
-            classes: 'coding insertion',
+            classes: '',
             position_nucleotide: insertPos + 1 + i,
-            number_codon: (insertPos - 1) / 3 + 1,
+            number_codon: codonNumber,
             isUtr: false,
             isCoding: true,
             region: "кодирующая",
             nucleotide: sequence[i],
         };
         
-        nucleotideElement = createNucleotideElement(nucleotideData);
-
-        classCodon = (((insertPos - 1) / 3 + 1) % 2) ? 'first_codon' : 'second_codon';
-        nucleotideElement.classList.add(classCodon);
-
-        nucleotide.after(nucleotideElement);
-        nucleotide = nucleotideElement;
+        const nucleotideElement = createNucleotideElement(nucleotideData);
+        
+        // Добавляем классы
+        nucleotideElement.classList.add('coding', 'insertion');
+        updateCodonClass(nucleotideElement, codonNumber);
+        
+        // Вставляем после текущего элемента
+        currentElement.parentNode.insertBefore(nucleotideElement, currentElement.nextSibling);
+        currentElement = nucleotideElement;
     }
+}
 
-    // Перерасчет позиций экзонов
-    nucleotide = FindNucleotide(insertPos);
-    exon = nucleotide.parentNode.parentNode;
+/**
+ * Скрывает экзоны и нуклеотиды после стоп-кодона
+ * @param {number} stopCodonPos - Позиция стоп-кодона
+ */
+function hideExonsAndNucleotidesAfterStopCodon(last_pos) {
+    // Скрываем нуклеотиды после стоп-кодона в текущем экзоне
+    const nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
+    nucleotides.forEach(element => {
+        const pos = parseInt(element.getAttribute("data-position-nucleotide"));
+        if (pos > last_pos) {
+            element.style.display = 'none';
+        }
+    });
+    
+    // Находим текущий экзон
+    const currentExon = findNucleotideAtPosition(last_pos).parentNode.parentNode;
+    if (!currentExon) return;
+    
+    // Скрываем все последующие экзоны
+    let nextExon = currentExon.nextElementSibling;
+    while (nextExon && nextExon.classList.contains('exon-card')) {
+        nextExon.style.display = 'none';
+        nextExon = nextExon.nextElementSibling;
+    }
 }
 
 // 3

@@ -18,7 +18,7 @@
     <!-- Шаблоны -->
     <!-- Шаблон экзона -->
     <script type="text/template" id="exonTemplate">
-        <div class="exon-card" data-exon-number="<%= number %>">
+        <div class="exon-card" data-exon-number="<%= number %>" data-exon-start-pos="<%= (start_position - utr5 > 1) ? (start_position - utr5) : 1 %>" data-exon-end-pos="<%= (end_position - utr5 <= utr3) ? end_position - utr5 : utr3 - utr5 %>" >
             <div class="exon-header">
                 <div class="exon-meta">
                     <span class="badge">Экзон <%= number %></span>
