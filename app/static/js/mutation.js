@@ -375,7 +375,7 @@ function Substitution(position, new_nucleotide, new_aminoacid) {
     aminoacid.after(new_aminoacid_element);
 }
 
-function Insertion(insertPos, sequence, stop_codon_pos) {
+function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_position) {
     // 1. Находим нуклеотид в позиции вставки
     const insertionNucleotide = findNucleotideAtPosition(insertPos);
     if (!insertionNucleotide) {
@@ -394,6 +394,56 @@ function Insertion(insertPos, sequence, stop_codon_pos) {
 
     // 5. Скрываем все после стоп-кодона
     hideExonsAndNucleotidesAfterStopCodon(last_pos);
+
+    // 6. Скрыть все домены после
+    hideDomain(insertPos);
+
+    // 7. Вставить новый домен
+    number = insertNewDomain(insertPos, new_domain);
+
+    // 8. Присвоить стиль разным аминокислотым
+    updateStyleAminoacid(number, different_position);
+}
+
+function hideDomain(insertPos) {
+    aminoacid = FindAminoacid(insertPos);
+    domain_card = aminoacid.parentNode.parentNode;
+
+    domains = document.querySelectorAll("div[class='domain-card']");
+    for(let i = parseInt(domain_card.getAttribute("data-domain-number")) + 1; i < domains.length; i++) {
+        domain = domains[i];
+        domain.style.display = 'none';
+    }
+}
+
+function insertNewDomain(insertPos, domain) {
+    aminoacid = FindAminoacid(insertPos);
+    prev_domain = aminoacid.parentNode.parentNode;
+    prev_number = parseInt(prev_domain.getAttribute("data-domain-number"));
+
+    const domainData = {
+        ...domain,
+        number: prev_number,
+    };
+
+    domainElement = createDomainElement(domainData);
+
+    prev_domain.after(domainElement);
+
+    return prev_number;
+}
+
+function updateStyleAminoacid(number, different_position) { 
+    domains = document.querySelectorAll(`div[data-domain-number="${number}"]`);
+    domains.forEach(domain => {
+        aminoacids = domain.querySelectorAll("span[data-position-aminoacid]");
+        aminoacids.forEach(aminoacid => {
+            pos = parseInt(aminoacid.getAttribute("data-position-aminoacid"));
+            if (pos > different_position) {
+                aminoacid.classList.add("different");
+            }
+        });
+    });
 }
 
 function updatePositionExon(insertPos, last_pos) {
@@ -431,9 +481,6 @@ function updatePositionExon(insertPos, last_pos) {
  */
 function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) {
     const nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
-    // exon = findNucleotideAtPosition(insertPos).parentNode.parentNode;
-    // st = parseInt(exon.getAttribute("data-exon-start-pos")) + parseInt(currentGene.base_sequence.urt5.length);
-    // end = stopCodonPos - parseInt(currentGene.base_sequence.urt5.length);
     
     for(let i = 0; i < nucleotides.length; i++) {
         element = nucleotides[i];
@@ -669,7 +716,7 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'insertion':
-            Insertion(parseInt(data.insertPos), data.sequence.toUpperCase(), apiResult.stop_codon_position);
+            Insertion(parseInt(data.insertPos), data.sequence.toUpperCase(), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position);
             resultHTML = `
                 <p><strong>Вставка выполнена</strong></p>
                 <p>Между позициями: <strong>${data.insertPos} и ${parseInt(data.insertPos) + 1}</strong></p>

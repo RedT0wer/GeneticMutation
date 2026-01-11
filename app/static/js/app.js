@@ -214,10 +214,10 @@ function createDomainElement(domainData) {
     const aminoacidsFragment = document.createDocumentFragment();
         
     // Создаем элементы для каждой
-    for (let i = 0; i < domain.sequence.length; i++) {
-        const aminoacid = domain.sequence[i];
+    for (let i = 0; i < domainData.sequence.length; i++) {
+        const aminoacid = domainData.sequence[i];
         // Позиция аминокислоты в белке (от 1)
-        const positionAminoacid = domain.start + i + 1;
+        const positionAminoacid = domainData.start + i + 1;
                 
         // Создаем данные для шаблона аминокислоты
         const aminoacidData = {
