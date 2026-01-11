@@ -386,7 +386,9 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
     stop_codon_pos = stop_codon_pos - (sequence.length - 1);
 
     // 2. Обновляем нуклеотиды и данные экзона после позиции вставки
-    last_pos = updateNucleotidesAfterInsertion(insertPos, sequence.length, stop_codon_pos);
+    const r = updateNucleotidesAfterInsertion(insertPos, sequence.length, stop_codon_pos);
+    last_pos = r.newPos; 
+    last_nucleotide = r.element;
 
     // 3. Обновляем позиции экзонов
     updatePositionExon(insertPos, last_pos);
@@ -395,7 +397,7 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
     insertNewNucleotides(insertPos, sequence, insertionNucleotide);
 
     // 5. Скрываем все после стоп-кодона
-    hideExonsAndNucleotidesAfterStopCodon(last_pos);
+    hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
 
     // 6. Скрыть все домены после
     hideDomain(insertPos);
@@ -509,7 +511,7 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
             if (i - 1 > stopCodonPos - 3 && i - 1 <= stopCodonPos) {
                 element.classList.add("stop_codon");
             } else if (i - 1 > stopCodonPos) {
-                return newPos - 1;
+                return { newPos: newPos - 1, element: element };
             }
         }
     }
@@ -568,20 +570,25 @@ function insertNewNucleotides(insertPos, sequence, referenceElement) {
  * Скрывает экзоны и нуклеотиды после стоп-кодона
  * @param {number} stopCodonPos - Позиция стоп-кодона
  */
-function hideExonsAndNucleotidesAfterStopCodon(last_pos) {
-    // Скрываем нуклеотиды после стоп-кодона в текущем экзоне
-    const nucleotides = document.querySelectorAll("span[data-position-nucleotide]");
-    nucleotides.forEach(element => {
-        const pos = parseInt(element.getAttribute("data-position-nucleotide"));
-        if (pos > last_pos) {
-            element.style.display = 'none';
-        }
-    });
-    
+function hideExonsAndNucleotidesAfterStopCodon(last_nucleotide) {
     // Находим текущий экзон
-    const currentExon = findNucleotideAtPosition(last_pos).parentNode.parentNode;
+    const currentExon = last_nucleotide.parentNode.parentNode;
     if (!currentExon) return;
-    
+
+    const nucleotides = currentExon.querySelectorAll("span[data-position-nucleotide]");
+    index = -1;
+    for(let i = 0; i < nucleotides.length; i++) {
+        if (nucleotides[i] == last_nucleotide) {
+            index = i;
+            break;
+        }   
+    }
+
+    for(let i = index; i < nucleotides.length; i++) {
+        element = nucleotides[i];
+        element.style.display = 'none';
+    }
+
     // Скрываем все последующие экзоны
     let nextExon = currentExon.nextElementSibling;
     while (nextExon && nextExon.classList.contains('exon-card')) {
