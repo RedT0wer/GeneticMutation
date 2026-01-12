@@ -70,38 +70,6 @@ function displayGeneInfo(gene) {
     `;
 }
 
-// ПАРАЛЛЕЛЬНОЕ СОЗДАНИЕ ЭКЗОНОВ
-async function displayExons(exons) {
-    const container = document.getElementById('exonsContainer');
-    const countEl = document.getElementById('exonCount');
-    const full_sequence = currentGene.base_sequence.full_sequence;
-    
-    const utr5 = currentGene.base_sequence.utr5;
-    const utr3 = currentGene.base_sequence.utr3;
-
-    container.innerHTML = '';
-    
-    countEl.innerHTML = `<i class="fas fa-layer-group"></i> ${exons.length} экзонов`;
-    
-    // Создаем все экзоны параллельно
-    const exonPromises = exons.map(exon => 
-        createExonElementAsync(exon, full_sequence, utr5, utr3)
-    );
-    
-    try {
-        // Ждем завершения всех промисов
-        const exonElements = await Promise.all(exonPromises);
-        
-        // Добавляем все разом
-        const fragment = document.createDocumentFragment();
-        exonElements.forEach(element => fragment.appendChild(element));
-        container.appendChild(fragment);
-    } catch (error) {
-        console.error('Ошибка при создании экзонов:', error);
-        showError('Ошибка при создании экзонов');
-    }
-}
-
 function createExonData(exon, full_sequence, utr5, utr3) {
     const exonSequence = full_sequence.slice(exon.start_position, exon.end_position + 1);
     
@@ -113,49 +81,6 @@ function createExonData(exon, full_sequence, utr5, utr3) {
         utr5: utr5.end_position,
         utr3: utr3.start_position
     };
-}
-
-async function createExonElementAsync(exon, full_sequence, utr5, utr3) {
-    const exonData = createExonData(exon, full_sequence, utr5, utr3);
-    
-    // Создаем нуклеотиды параллельно
-    const nucleotidesPromises = Array.from(exonData.sequence).map((nucleotide, i) => {
-        return new Promise(resolve => {
-            const { globalPosition, numberCodon, isUtr, isCoding, region } = 
-                calculateNucleotideProperties(exonData.start_position, i, exonData.utr5, exonData.utr3);
-            const classCodon = (numberCodon % 2) ? 'first_codon' : 'second_codon';
-            
-            const nucleotideData = {
-                classes: isUtr ? 'utr' : 'coding' + ' ' + classCodon,
-                position_nucleotide: isUtr ? -1 : globalPosition,
-                number_codon: isUtr ? -1 : numberCodon,
-                isUtr: isUtr,
-                isCoding: isCoding,
-                region: region,
-                nucleotide: nucleotide
-            };
-            
-            const nucleotideElement = createNucleotideElement(nucleotideData);
-            resolve(nucleotideElement);
-        });
-    });
-    
-    const nucleotideElements = await Promise.all(nucleotidesPromises);
-    
-    // Собираем экзон
-    const exonHtml = compileTemplate('exonTemplate', exonData);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = exonHtml;
-    const exonElement = tempDiv.firstElementChild;
-    
-    const sequenceContent = exonElement.querySelector('.sequence-content');
-    
-    // Добавляем все нуклеотиды
-    const fragment = document.createDocumentFragment();
-    nucleotideElements.forEach(element => fragment.appendChild(element));
-    sequenceContent.appendChild(fragment);
-    
-    return exonElement;
 }
 
 function calculateNucleotideProperties(startPosition, index, utr5End, utr3Start) {
@@ -176,86 +101,177 @@ function createNucleotideElement(nucleotideData) {
     return tempSpan.firstElementChild;
 }
 
-// ПАРАЛЛЕЛЬНОЕ СОЗДАНИЕ ДОМЕНОВ
-async function displayDomains(domains) {
-    const container = document.getElementById('domainsContainer');
-    const countEl = document.getElementById('domainCount');
-    
-    // Очищаем контейнер
-    container.innerHTML = '';
-    
-    // Обновляем статистику сразу
-    countEl.innerHTML = `<i class="fas fa-shapes"></i> ${domains.length} доменов`;
-    
-    // Если нет доменов, выходим
-    if (domains.length === 0) return;
-    
-    try {
-        // Создаем все домены параллельно
-        const domainPromises = domains.map((domain, index) => 
-            createDomainElementAsync(domain, index)
-        );
-        
-        // Ждем завершения всех промисов
-        const domainElements = await Promise.all(domainPromises);
-        
-        // Добавляем все разом
-        const fragment = document.createDocumentFragment();
-        domainElements.forEach(element => fragment.appendChild(element));
-        container.appendChild(fragment);
-    } catch (error) {
-        console.error('Ошибка при создании доменов:', error);
-        showError('Ошибка при создании доменов');
-    }
+async function createExonElementAsync(exonData) {
+    // Создаем элемент экзона без нуклеотидов
+    const exonHtml = compileTemplate('exonTemplate', exonData);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = exonHtml;
+    return tempDiv.firstElementChild;
 }
 
-async function createDomainElementAsync(domain, index) {
-    const domainData = {
-        ...domain,
-        number: index + 1,
-    };
+async function fillExonWithNucleotidesAsync(exonElement, exonData) {
+    const sequenceContent = exonElement.querySelector('.sequence-content');
     
-    // Создаем аминокислоты параллельно
+    // Параллельно создаем все нуклеотиды для этого экзона
+    const nucleotidePromises = Array.from(exonData.sequence).map((nucleotide, i) => {
+        return new Promise(resolve => {
+            const { globalPosition, numberCodon, isUtr, isCoding, region } = 
+                calculateNucleotideProperties(exonData.start_position, i, exonData.utr5, exonData.utr3);
+            const classCodon = (numberCodon % 2) ? 'first_codon' : 'second_codon';
+            
+            const nucleotideData = {
+                classes: isUtr ? 'utr' : 'coding' + ' ' + classCodon,
+                position_nucleotide: isUtr ? -1 : globalPosition,
+                number_codon: isUtr ? -1 : numberCodon,
+                isUtr: isUtr,
+                isCoding: isCoding,
+                region: region,
+                nucleotide: nucleotide
+            };
+            
+            const nucleotideElement = createNucleotideElement(nucleotideData);
+            resolve({ element: nucleotideElement, position: i });
+        });
+    });
+    
+    const nucleotideResults = await Promise.all(nucleotidePromises);
+    
+    // Сортируем по позиции и добавляем в правильном порядке
+    nucleotideResults.sort((a, b) => a.position - b.position);
+    
+    const fragment = document.createDocumentFragment();
+    nucleotideResults.forEach(result => fragment.appendChild(result.element));
+    sequenceContent.appendChild(fragment);
+    
+    return exonElement;
+}
+
+async function createDomainElementAsync(domainData) {
+    // Создаем элемент домена без аминокислот
+    const domainHtml = compileTemplate('domainTemplate', domainData);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = domainHtml;
+    return tempDiv.firstElementChild;
+}
+
+async function fillDomainWithAminoacidsAsync(domainElement, domainData) {
+    const sequenceContent = domainElement.querySelector('.sequence-content');
+    
+    // Параллельно создаем все аминокислоты для этого домена
     const aminoacidPromises = Array.from(domainData.sequence).map((aminoacid, i) => {
         return new Promise(resolve => {
-            // Позиция аминокислоты в белке (от 1)
             const positionAminoacid = domainData.start + i;
             
-            // Создаем данные для шаблона аминокислоты
             const aminoacidData = {
                 position_aminoacid: positionAminoacid,
                 aminoacid: aminoacid
             };
             
-            // Создаем элемент аминокислоты
             const aminoacidHtml = compileTemplate('aminoacidTemplate', aminoacidData);
-            
-            // Создаем временный элемент для аминокислоты
             const tempSpan = document.createElement('span');
             tempSpan.innerHTML = aminoacidHtml;
             const aminoacidElement = tempSpan.firstElementChild;
             
-            resolve(aminoacidElement);
+            resolve({ element: aminoacidElement, position: i });
         });
     });
     
-    const aminoacidElements = await Promise.all(aminoacidPromises);
+    const aminoacidResults = await Promise.all(aminoacidPromises);
     
-    // Собираем домен
-    const domainHtml = compileTemplate('domainTemplate', domainData);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = domainHtml;
-    const domainElement = tempDiv.firstElementChild;
+    // Сортируем по позиции и добавляем в правильном порядке
+    aminoacidResults.sort((a, b) => a.position - b.position);
     
-    // Находим контейнер для последовательности
-    const sequenceContent = domainElement.querySelector('.sequence-content');
-    
-    // Добавляем все аминокислоты
     const fragment = document.createDocumentFragment();
-    aminoacidElements.forEach(element => fragment.appendChild(element));
+    aminoacidResults.forEach(result => fragment.appendChild(result.element));
     sequenceContent.appendChild(fragment);
     
     return domainElement;
+}
+
+// Вспомогательные функции для максимального параллелизма
+async function createAllExonsParallel(exons) {
+    const full_sequence = currentGene.base_sequence.full_sequence;
+    const utr5 = currentGene.base_sequence.utr5;
+    const utr3 = currentGene.base_sequence.utr3;
+    
+    // Параллельно создаем данные для всех экзонов
+    const exonDataPromises = exons.map(exon => 
+        Promise.resolve(createExonData(exon, full_sequence, utr5, utr3))
+    );
+    
+    const exonDatas = await Promise.all(exonDataPromises);
+    
+    // Параллельно создаем элементы всех экзонов (без нуклеотидов)
+    const exonElementPromises = exonDatas.map(exonData => 
+        createExonElementAsync(exonData)
+    );
+    
+    const exonElements = await Promise.all(exonElementPromises);
+    
+    return { exonDatas, exonElements };
+}
+
+async function displayAllExonsParallel({ exonDatas, exonElements }) {
+    start = performance.now();
+    const container = document.getElementById('exonsContainer');
+    const countEl = document.getElementById('exonCount');
+    
+    container.innerHTML = '';
+    countEl.innerHTML = `<i class="fas fa-layer-group"></i> ${exonElements.length} экзонов`;
+    
+    // Параллельно наполняем все экзоны нуклеотидами
+    const fillPromises = exonElements.map((exonElement, index) => 
+        fillExonWithNucleotidesAsync(exonElement, exonDatas[index])
+    );
+    
+    await Promise.all(fillPromises);
+    
+    // Добавляем все экзоны разом
+    const fragment = document.createDocumentFragment();
+    exonElements.forEach(element => fragment.appendChild(element));
+    container.appendChild(fragment);
+    console.log(performance.now() - start);
+}
+
+async function createAllDomainsParallel(domains) {
+    // Параллельно создаем данные для всех доменов
+    const domainDataPromises = domains.map((domain, index) => 
+        Promise.resolve({
+            ...domain,
+            number: index + 1,
+        })
+    );
+    
+    const domainDatas = await Promise.all(domainDataPromises);
+    
+    // Параллельно создаем элементы всех доменов (без аминокислот)
+    const domainElementPromises = domainDatas.map(domainData => 
+        createDomainElementAsync(domainData)
+    );
+    
+    const domainElements = await Promise.all(domainElementPromises);
+    
+    return { domainDatas, domainElements };
+}
+
+async function displayAllDomainsParallel({ domainDatas, domainElements }) {
+    const container = document.getElementById('domainsContainer');
+    const countEl = document.getElementById('domainCount');
+    
+    container.innerHTML = '';
+    countEl.innerHTML = `<i class="fas fa-shapes"></i> ${domainElements.length} доменов`;
+    
+    // Параллельно наполняем все домены аминокислотами
+    const fillPromises = domainElements.map((domainElement, index) => 
+        fillDomainWithAminoacidsAsync(domainElement, domainDatas[index])
+    );
+    
+    await Promise.all(fillPromises);
+    
+    // Добавляем все домены разом
+    const fragment = document.createDocumentFragment();
+    domainElements.forEach(element => fragment.appendChild(element));
+    container.appendChild(fragment);
 }
 
 // Построение гена через API
@@ -293,13 +309,30 @@ async function buildGene() {
         currentGene = data.gene;
         showStatus('Ген успешно построен!', 'success');
         
-        // ПАРАЛЛЕЛЬНОЕ ОТОБРАЖЕНИЕ ИНФОРМАЦИИ, ЭКЗОНОВ И ДОМЕНОВ
+        // ПАРАЛЛЕЛЬНОЕ ОТОБРАЖЕНИЕ ВСЕГО КОНТЕНТА
         try {
-            // Запускаем все задачи параллельно
+            // Запускаем ВСЕ задачи параллельно на 4 уровнях:
+            
+            // Уровень 1: Основная информация гена
+            const geneInfoPromise = Promise.resolve(displayGeneInfo(currentGene));
+
+            // Уровень 2: Подготовка данных для экзонов и доменов (параллельно)
+            const [exonsData, domainsData] = await Promise.all([
+                Promise.resolve(currentGene.base_sequence.exons),
+                Promise.resolve(currentGene.protein.domains)
+            ]);
+            
+            // Уровень 3: Создание элементов экзонов и доменов (параллельно)
+            const [exonsCreated, domainsCreated] = await Promise.all([
+                createAllExonsParallel(exonsData),
+                createAllDomainsParallel(domainsData)
+            ]);
+            
+            // Уровень 4: Наполнение элементами и отображение (параллельно)
             await Promise.all([
-                displayGeneInfo(currentGene),
-                displayExons(currentGene.base_sequence.exons),
-                displayDomains(currentGene.protein.domains)
+                geneInfoPromise,
+                displayAllExonsParallel(exonsCreated),
+                displayAllDomainsParallel(domainsCreated)
             ]);
             
             // Показываем содержимое после завершения всех задач
