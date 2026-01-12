@@ -1,7 +1,7 @@
 ﻿import logging
 import xmltodict
 from typing import List, Dict, Any, Optional, Tuple
-from requests import get
+import httpx
 from .api_utils import APIUtils, APIError, retry_on_failure
 from ..models.gene_models import Exon
 from config import config
@@ -16,31 +16,31 @@ class NCBIClient:
         )
         self.logger = logging.getLogger(__name__)
     
-    def get_exons_data(self, identifier: str) -> List[Exon]:
+    async def get_exons_data(self, identifier: str) -> List[Exon]:
         """
         Получить данные об экзонах из NCBI
         """
         try:
-            data = self._fetch_ncbi_data(identifier)
+            data = await self._fetch_ncbi_data(identifier)
             return self._process_ncbi_exons(data)
         except Exception as e:
             self.logger.error(f"Failed to get NCBI exons for {identifier}: {e}")
             raise APIError(f"Failed to get NCBI exons: {e}")
     
-    def get_sequence_data(self, identifier: str) -> Tuple[str, int, int]:
+    async def get_sequence_data(self, identifier: str) -> Tuple[str, int, int]:
         """
         Получить последовательность из NCBI
         Возвращает: (sequence, utr5_start, utr3_start)
         """
         try:
-            data = self._fetch_ncbi_data(identifier)
+            data = await self._fetch_ncbi_data(identifier)
             return self._process_ncbi_sequence(data)
         except Exception as e:
             self.logger.error(f"Failed to get NCBI sequence for {identifier}: {e}")
             raise APIError(f"Failed to get NCBI sequence: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_ncbi_data(self, identifier: str) -> Dict[str, Any]:
+    async def _fetch_ncbi_data(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из NCBI EUtils"""
         url = config.NCBI_EUTILS_URL
         params = {
@@ -49,12 +49,13 @@ class NCBIClient:
             "id": identifier
         }
         
-        response = get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
-        if not response.ok:
-            raise APIError(f"NCBI API error: {response.status_code}")
-        
-        data = xmltodict.parse(response.text)
-        return data
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
+            if not response.is_success:
+                raise APIError(f"NCBI API error: {response.status_code}")
+            
+            data = xmltodict.parse(response.text)
+            return data
     
     def _process_ncbi_exons(self, data: Dict) -> List[Exon]:
         """Обработка данных экзонов из NCBI"""
@@ -153,11 +154,11 @@ class NCBIClient:
             return ""
     
     # Старые методы для обратной совместимости
-    def get_exons_legacy(self, identifier: str) -> List[Tuple[int, int]]:
+    async def get_exons_legacy(self, identifier: str) -> List[Tuple[int, int]]:
         """Старый метод для получения экзонов (совместимость)"""
-        exons = self.get_exons_data(identifier)
+        exons = await self.get_exons_data(identifier)
         return [(exon.start_position, exon.end_position) for exon in exons]
     
-    def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
+    async def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
         """Старый метод для получения последовательности (совместимость)"""
-        return self.get_sequence_data(identifier)
+        return await self.get_sequence_data(identifier)

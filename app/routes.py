@@ -21,7 +21,7 @@ gene_service = GeneService()
 
 # Маршруты для работы с генами
 @api_bp.route('/gene/build', methods=['POST'])
-def build_gene():
+async def build_gene():
     """
     Построить структуру гена из данных внешних API
     """
@@ -49,9 +49,9 @@ def build_gene():
         # Построение гена
         gene = None
         if source == 'ensembl':
-            gene = gene_service.build_gene_from_ensembl(gene_id, protein_id)
+            gene = await gene_service.build_gene_from_ensembl(gene_id, protein_id)
         elif source == 'ncbi':
-            gene = gene_service.build_gene_from_ncbi(gene_id, protein_id)
+            gene = await gene_service.build_gene_from_ncbi(gene_id, protein_id)
         
         if not gene:
             return jsonify({'error': 'Failed to build gene structure'}), 500

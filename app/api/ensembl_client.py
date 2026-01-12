@@ -1,6 +1,6 @@
 ﻿import logging
 from typing import List, Dict, Any, Optional, Tuple
-from requests import get
+import httpx
 from .api_utils import APIUtils, APIError, retry_on_failure
 from ..models.gene_models import Exon
 from config import config
@@ -15,36 +15,36 @@ class EnsemblClient:
         )
         self.logger = logging.getLogger(__name__)
     
-    def get_exons_data(self, gene_id: str) -> List[Exon]:
+    async def get_exons_data(self, gene_id: str) -> List[Exon]:
         """
         Получить данные об экзонах гена
         Возвращает список экзонов с правильными позициями
         """
         try:
             # Получаем расширенную информацию о гене
-            gene_data = self._get_gene_with_exons(gene_id)
+            gene_data = await self._get_gene_with_exons(gene_id)
             # Получаем последовательности экзонов
-            exon_sequences = self._get_exon_sequences(gene_id)
+            exon_sequences = await self._get_exon_sequences(gene_id)
             
             return self._process_exons_data(gene_data, exon_sequences)
         except Exception as e:
             self.logger.error(f"Failed to get exons data for {gene_id}: {e}")
             raise APIError(f"Failed to get exons data: {e}")
     
-    def get_sequence_data(self, transcript_id: str) -> Tuple[str, int, int]:
+    async def get_sequence_data(self, transcript_id: str) -> Tuple[str, int, int]:
         """
         Получить последовательность транскрипта
         Возвращает: (sequence, utr5_start, utr3_start)
         """
         try:
-            data = self._get_sequence(transcript_id)
+            data = await self._get_sequence(transcript_id)
             return self._process_sequence_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get sequence for {transcript_id}: {e}")
             raise APIError(f"Failed to get sequence: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _get_gene_with_exons(self, gene_id: str) -> Dict[str, Any]:
+    async def _get_gene_with_exons(self, gene_id: str) -> Dict[str, Any]:
         """Получить расширенную информацию о гене с экзонами"""
         url = config.ENSEMBL_REST_URL_LOOKUP + gene_id
         params = {
@@ -52,14 +52,15 @@ class EnsemblClient:
             "content-type": "application/json"
         }
         
-        response = get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
-        if not response.ok:
-            raise APIError(f"Ensembl API error: {response.status_code}")
-        
-        return response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
+            if not response.is_success:
+                raise APIError(f"Ensembl API error: {response.status_code}")
+            
+            return response.json()
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _get_exon_sequences(self, transcript_id: str) -> Dict[str, Any]:
+    async def _get_exon_sequences(self, transcript_id: str) -> Dict[str, Any]:
         """Получить последовательности экзонов"""
         url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
         params = {
@@ -69,14 +70,15 @@ class EnsemblClient:
             "multiple_sequences": "1"
         }
         
-        response = get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
-        if not response.ok:
-            raise APIError(f"Ensembl sequence API error: {response.status_code}")
-        
-        return response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
+            if not response.is_success:
+                raise APIError(f"Ensembl sequence API error: {response.status_code}")
+            
+            return response.json()
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _get_sequence(self, identifier: str) -> Dict[str, Any]:
+    async def _get_sequence(self, identifier: str) -> Dict[str, Any]:
         """Получить последовательность (оригинальный метод)"""
         url = config.ENSEMBL_REST_URL_SEQUENCE + identifier
         params = {
@@ -85,11 +87,12 @@ class EnsemblClient:
             "content-type": "application/json"
         }
         
-        response = get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
-        if not response.ok:
-            raise APIError(f"Ensembl sequence API error: {response.status_code}")
-        
-        return response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
+            if not response.is_success:
+                raise APIError(f"Ensembl sequence API error: {response.status_code}")
+            
+            return response.json()
     
     def _process_exons_data(self, gene_data: Dict, exon_sequences: Dict) -> List[Exon]:
         """Обработка данных экзонов (улучшенная версия)"""
@@ -145,11 +148,11 @@ class EnsemblClient:
         return sequence.upper(), utr5_start, utr3_start
     
     # Старые методы для обратной совместимости
-    def get_exons_legacy(self, identifier: str) -> List[Tuple[int, int]]:
+    async def get_exons_legacy(self, identifier: str) -> List[Tuple[int, int]]:
         """Старый метод для получения экзонов (совместимость)"""
-        exons = self.get_exons_data(identifier)
+        exons = await self.get_exons_data(identifier)
         return [(exon.start_position, exon.end_position) for exon in exons]
     
-    def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
+    async def get_sequence_legacy(self, identifier: str) -> Tuple[str, int, int]:
         """Старый метод для получения последовательности (совместимость)"""
-        return self.get_sequence_data(identifier)
+        return await self.get_sequence_data(identifier)

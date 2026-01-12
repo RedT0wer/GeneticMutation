@@ -1,6 +1,6 @@
 ﻿import logging
 from typing import Dict, List, Tuple, Any, Optional
-from requests import get
+import httpx
 from .api_utils import APIUtils, APIError, retry_on_failure
 from config import config
 
@@ -14,51 +14,53 @@ class UniProtClient:
         )
         self.logger = logging.getLogger(__name__)
     
-    def get_sequence_data(self, identifier: str) -> str:
+    async def get_sequence_data(self, identifier: str) -> str:
         """
         Получить последовательность белка из UniProt
         Возвращает: sequence
         """
         try:
-            data = self._fetch_uniprot_seq(identifier)
+            data = await self._fetch_uniprot_seq(identifier)
             return self._process_sequence_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get UniProt sequence for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt sequence: {e}")
     
-    def get_protein_domains(self, identifier: str) -> List[Tuple[int, int, str]]:
+    async def get_protein_domains(self, identifier: str) -> List[Tuple[int, int, str]]:
         """
         Получить данные о доменах белка
         Возвращает список кортежей: (start, end, description)
         """
         try:
-            data = self._fetch_uniprot_dom(identifier)
+            data = await self._fetch_uniprot_dom(identifier)
             return self._process_domains_data(data)
         except Exception as e:
             self.logger.error(f"Failed to get UniProt domains for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt domains: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_uniprot_seq(self, identifier: str) -> Dict[str, Any]:
+    async def _fetch_uniprot_seq(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
         url = config.UNIPROT_REST_URL + identifier
         
-        response = get(url)
-        if not response.ok:
-            raise APIError(f"UniProt API error: {response.status_code}")
-        
-        return response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            if not response.is_success:
+                raise APIError(f"UniProt API error: {response.status_code}")
+            
+            return response.json()
 
     @retry_on_failure(max_retries=3, delay=1.0)
-    def _fetch_uniprot_dom(self, identifier: str) -> Dict[str, Any]:
+    async def _fetch_uniprot_dom(self, identifier: str) -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
         url = config.UNIPROT_REST_URL + identifier + ".json" + "?fields=ft_domain%2Cft_region"
         
-        response = get(url)
-        if not response.ok:
-            raise APIError(f"UniProt API error: {response.status_code}")
-        
-        return response.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            if not response.is_success:
+                raise APIError(f"UniProt API error: {response.status_code}")
+            
+            return response.json()
     
     def _process_sequence_data(self, data: Dict) -> str:
         """Обработка данных последовательности белка"""
@@ -103,10 +105,10 @@ class UniProtClient:
             raise APIError(f"Failed to process UniProt domains: {e}")
     
     # Старые методы для обратной совместимости
-    def get_sequence_legacy(self, identifier: str) -> str:
+    async def get_sequence_legacy(self, identifier: str) -> str:
         """Старый метод для получения последовательности (совместимость)"""
-        return self.get_sequence_data(identifier)
+        return await self.get_sequence_data(identifier)
     
-    def get_domains_legacy(self, identifier: str) -> List[Tuple[int, int, str]]:
+    async def get_domains_legacy(self, identifier: str) -> List[Tuple[int, int, str]]:
         """Старый метод для получения доменов (совместимость)"""
-        return self.get_protein_domains(identifier)
+        return await self.get_protein_domains(identifier)

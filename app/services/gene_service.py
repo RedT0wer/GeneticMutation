@@ -17,7 +17,7 @@ class GeneService:
         self.ensembl_client = EnsemblClient()
         self.translation_service = TranslationService()
     
-    def build_gene_from_ensembl(self, gene_id: str, protein_id: str) -> Optional[Gene]:
+    async def build_gene_from_ensembl(self, gene_id: str, protein_id: str) -> Optional[Gene]:
         """
         Построить ген из данных Ensembl + UniProt
         
@@ -29,10 +29,10 @@ class GeneService:
             logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
             
             # 1. Получаем экзоны из Ensembl
-            raw_exons = self.ensembl_client.get_exons_legacy(gene_id)
+            raw_exons = await self.ensembl_client.get_exons_legacy(gene_id)
             
             # 2. Получаем последовательность и UTR из Ensembl
-            sequence, utr5_start, utr3_start = self.ensembl_client.get_sequence_data(gene_id)
+            sequence, utr5_start, utr3_start = await self.ensembl_client.get_sequence_data(gene_id)
             
             # 3. Создаём UTR объекты
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
@@ -51,7 +51,7 @@ class GeneService:
             )
             
             # 6. Получаем белок из UniProt
-            protein = self._build_protein_from_uniprot(protein_id)
+            protein = await self._build_protein_from_uniprot(protein_id)
 
             # 7. Создание транслируемого белка
             translated_protein = self._translated_base_nucleotide(base_sequence, protein)
@@ -69,7 +69,7 @@ class GeneService:
             logger.error(f"Error building gene from Ensembl: {e}", exc_info=True)
             return None
     
-    def build_gene_from_ncbi(self, ncbi_id: str, protein_id: str) -> Optional[Gene]:
+    async def build_gene_from_ncbi(self, ncbi_id: str, protein_id: str) -> Optional[Gene]:
         """
         Построить ген из данных NCBI + UniProt
         """
@@ -77,10 +77,10 @@ class GeneService:
             logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
             
             # 1. Получаем экзоны из NCBI
-            raw_exons = self.ncbi_client.get_exons_legacy(ncbi_id)
+            raw_exons = await self.ncbi_client.get_exons_legacy(ncbi_id)
             
             # 2. Получаем последовательность и UTR из NCBI
-            sequence, utr5_start, utr3_start = self.ncbi_client.get_sequence_data(ncbi_id)
+            sequence, utr5_start, utr3_start = await self.ncbi_client.get_sequence_data(ncbi_id)
             
             # 3. Создаём UTR объекты
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
@@ -99,7 +99,7 @@ class GeneService:
             )
             
             # 6. Получаем белок из UniProt
-            protein = self._build_protein_from_uniprot(protein_id)
+            protein = await self._build_protein_from_uniprot(protein_id)
 
             # 7. Создание транслируемого белка
             translated_protein = self._translated_base_nucleotide(base_sequence, protein)
@@ -117,16 +117,16 @@ class GeneService:
             logger.error(f"Error building gene from NCBI: {e}", exc_info=True)
             return None
     
-    def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
+    async def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
         """
         Построить объект Protein из данных UniProt
         """
         try:
             # 1. Получаем последовательность белка
-            protein_seq = self.uniprot_client.get_sequence_data(protein_id)
+            protein_seq = await self.uniprot_client.get_sequence_data(protein_id)
             
             # 2. Получаем домены белка (start, end, description)
-            domains_data = self.uniprot_client.get_protein_domains(protein_id)
+            domains_data = await self.uniprot_client.get_protein_domains(protein_id)
             
             # 3. Создаём объекты ProteinDomain
             domains = self._build_protein_domains(protein_seq, domains_data)
