@@ -1,6 +1,6 @@
 ﻿from typing import List, Tuple, Optional, Dict
 import logging
-
+import asyncio
 from ..services.translation_service import TranslationService
 from ..models.gene_models import Gene, Protein, BaseSequence, Exon, UTR, ProteinDomain
 from ..api import EnsemblClient, UniProtClient, NCBIClient
@@ -27,20 +27,38 @@ class GeneService:
         """
         try:
             logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
-            
-            # 1. Получаем экзоны из Ensembl
-            raw_exons = await self.ensembl_client.get_exons_legacy(gene_id)
-            
-            # 2. Получаем последовательность и UTR из Ensembl
-            sequence, utr5_start, utr3_start = await self.ensembl_client.get_sequence_data(gene_id)
-            
-            # 3. Создаём UTR объекты
+        
+            # 1. Запускаем все три корутины одновременно
+            exons_task = self.ensembl_client.get_exons_legacy(gene_id)
+            sequence_task = self.ensembl_client.get_sequence_data(gene_id)
+            protein_task = self._build_protein_from_uniprot(protein_id)
+        
+            # 2. Ожидаем завершения всех трех задач
+            raw_exons, sequence_data, protein = await asyncio.gather(
+                exons_task,
+                sequence_task,
+                protein_task,
+                return_exceptions=True  # Обрабатываем исключения по отдельности
+            )
+        
+            # 3. Проверяем результаты на исключения
+            if isinstance(raw_exons, Exception):
+                raise Exception(f"Failed to get exons: {raw_exons}")
+            if isinstance(sequence_data, Exception):
+                raise Exception(f"Failed to get sequence data: {sequence_data}")
+            if isinstance(protein, Exception):
+                raise Exception(f"Failed to get protein: {protein}")
+        
+            # Распаковываем данные последовательности
+            sequence, utr5_start, utr3_start = sequence_data
+        
+            # 4. Создаём UTR объекты
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
-            # 4. Создание экзонов
+            # 5. Создание экзонов
             exons = self._build_exons(raw_exons, utr5, utr3)
-            
-            # 5. Создаём базовую последовательность
+        
+            # 6. Создаём базовую последовательность
             base_sequence = BaseSequence(
                 identifier=gene_id,
                 length=len(sequence),
@@ -49,19 +67,16 @@ class GeneService:
                 utr5=utr5,
                 full_sequence=sequence
             )
-            
-            # 6. Получаем белок из UniProt
-            protein = await self._build_protein_from_uniprot(protein_id)
-
+        
             # 7. Создание транслируемого белка
             translated_protein = self._translated_base_nucleotide(base_sequence, protein)
-            
+        
             # 8. Создаём ген
             gene = Gene(
                 protein=translated_protein,
                 base_sequence=base_sequence
             )
-            
+        
             logger.info(f"Gene built: {len(exons)} exons, {len(protein.domains)} domains")
             return gene
             
@@ -76,19 +91,37 @@ class GeneService:
         try:
             logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
             
-            # 1. Получаем экзоны из NCBI
-            raw_exons = await self.ncbi_client.get_exons_legacy(ncbi_id)
+            # 1. Запускаем все три корутины одновременно
+            exons_task = self.ncbi_client.get_exons_legacy(ncbi_id)
+            sequence_task = self.ncbi_client.get_sequence_data(ncbi_id)
+            protein_task = self._build_protein_from_uniprot(protein_id)
+
+            # 2. Ожидаем завершения всех трех задач
+            raw_exons, sequence_data, protein = await asyncio.gather(
+                exons_task,
+                sequence_task,
+                protein_task,
+                return_exceptions=True  # Обрабатываем исключения по отдельности
+            )
+
+            # 3. Проверяем результаты на исключения
+            if isinstance(raw_exons, Exception):
+                raise Exception(f"Failed to get exons: {raw_exons}")
+            if isinstance(sequence_data, Exception):
+                raise Exception(f"Failed to get sequence data: {sequence_data}")
+            if isinstance(protein, Exception):
+                raise Exception(f"Failed to get protein: {protein}")
+
+            # Распаковываем данные последовательности
+            sequence, utr5_start, utr3_start = sequence_data
             
-            # 2. Получаем последовательность и UTR из NCBI
-            sequence, utr5_start, utr3_start = await self.ncbi_client.get_sequence_data(ncbi_id)
-            
-            # 3. Создаём UTR объекты
+            # 4. Создаём UTR объекты
             utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
-            # 4. Создание экзонов
+            # 5. Создание экзонов
             exons = self._build_exons(raw_exons, utr5, utr3)
             
-            # 5. Создаём базовую последовательность
+            # 6. Создаём базовую последовательность
             base_sequence = BaseSequence(
                 identifier=ncbi_id,
                 length=len(sequence),
@@ -98,9 +131,6 @@ class GeneService:
                 full_sequence=sequence
             )
             
-            # 6. Получаем белок из UniProt
-            protein = await self._build_protein_from_uniprot(protein_id)
-
             # 7. Создание транслируемого белка
             translated_protein = self._translated_base_nucleotide(base_sequence, protein)
             
