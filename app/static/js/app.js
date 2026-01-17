@@ -166,7 +166,6 @@ function createNucleotideElement(nucleotideData) {
     return tempSpan.firstElementChild;
 }
 
-// Отображение доменов
 function displayDomains(domains) {
     const container = document.getElementById('domainsContainer');
     const countEl = document.getElementById('domainCount');
@@ -232,7 +231,7 @@ function createDomainElement(domainData) {
 
 // Построение гена через API
 async function buildGene() {
-    const source = document.getElementById('source').value;
+    const source = document.getElementById('source-nucleotide').value;
     const geneId = document.getElementById('geneId').value.trim();
     const proteinId = document.getElementById('proteinId').value.trim();
     
@@ -267,16 +266,67 @@ async function buildGene() {
         
         displayGeneInfo(currentGene);
         
-        start = performance.now();
         displayExons(currentGene.base_sequence.exons);
-        console.log("Exons", performance.now() - start);
 
-        start = performance.now();
         displayDomains(currentGene.protein.domains, currentGene.protein.length);
-        console.log("Domains", performance.now() - start);
 
         
         document.getElementById('geneContent').style.display = 'flex';
+
+        container = document.querySelector(`.structure-container`);
+        container.addEventListener('mouseover', (event) => {
+            if (event.target.hasAttribute('data-position-nucleotide') && parseInt(event.target.getAttribute('data-position-nucleotide')) != -1) {
+                const number_codon = event.target.getAttribute('data-codon');
+                elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
+                elements.forEach(element => {
+                    element.setAttribute('style', 'color: white; background: black;');
+                });
+
+                aminoacid = container.querySelector(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacid.setAttribute('style', 'color: white; background: black;');
+            }
+        });
+        container.addEventListener('mouseover', (event) => {
+            if (event.target.hasAttribute('data-position-aminoacid')) {
+                const number_codon = event.target.getAttribute('data-position-aminoacid');
+                elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
+                elements.forEach(element => {
+                    element.setAttribute('style', 'color: white; background: black;');
+                });
+
+                aminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacids.forEach(aminoacid => {
+                    aminoacid.setAttribute('style', 'color: white; background: black;');
+                });
+            }
+        });
+
+        container.addEventListener('mouseout', (event) => {
+            if (event.target.hasAttribute('data-position-nucleotide') && parseInt(event.target.getAttribute('data-position-nucleotide')) != -1) {
+                const number_codon = event.target.getAttribute('data-codon');
+                elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
+                elements.forEach(element => {
+                    element.setAttribute('style', '');
+                });
+
+                aminoacid = container.querySelector(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacid.setAttribute('style', '');
+            }
+        });
+        container.addEventListener('mouseout', (event) => {
+            if (event.target.hasAttribute('data-position-aminoacid')) {
+                const number_codon = event.target.getAttribute('data-position-aminoacid');
+                elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
+                elements.forEach(element => {
+                    element.setAttribute('style', '');
+                });
+
+                aminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacids.forEach(aminoacid => {
+                    aminoacid.setAttribute('style', '');
+                });
+            }
+        });
         
     } catch (error) {
         showStatus(error.message, 'error');

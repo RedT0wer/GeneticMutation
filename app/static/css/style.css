@@ -433,10 +433,6 @@ select.form-control {
     border-radius: 5px;
 }
 
-.sequence-content span:hover {
-    background: #d2d2d2;
-}
-
 .highlight {
     background: #d2d2d2;
 }
