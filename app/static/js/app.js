@@ -171,16 +171,12 @@ function displayDomains(domains) {
     const container = document.getElementById('domainsContainer');
     const countEl = document.getElementById('domainCount');
     
-    // Очищаем контейнер
     container.innerHTML = '';
     
-    // Обновляем статистику сразу
     countEl.innerHTML = `<i class="fas fa-shapes"></i> ${domains.length} доменов`;
     
-    // Если нет доменов, выходим
     if (domains.length === 0) return;
     
-    // Создаем DocumentFragment для более эффективного добавления
     const fragment = document.createDocumentFragment();
     
     for(let i = 0; i < domains.length; i++) {
@@ -194,54 +190,41 @@ function displayDomains(domains) {
         
         domainElement = createDomainElement(domainData);
         
-        // Добавляем домен во фрагмент
         fragment.appendChild(domainElement);
     };
     
-    // Добавляем все домены на страницу за одну операцию
     container.appendChild(fragment);
 }
 
 function createDomainElement(domainData) {
-    // Создаем HTML домена
     const domainHtml = compileTemplate('domainTemplate', domainData);
         
-    // Создаем временный контейнер для парсинга HTML
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = domainHtml;
     const domainElement = tempDiv.firstElementChild;
         
-    // Находим контейнер для последовательности
     const sequenceContent = domainElement.querySelector('.sequence-content');
         
-    // Создаем DocumentFragment для аминокислот
     const aminoacidsFragment = document.createDocumentFragment();
         
-    // Создаем элементы для каждой
     for (let i = 0; i < domainData.sequence.length; i++) {
         const aminoacid = domainData.sequence[i];
-        // Позиция аминокислоты в белке (от 1)
         const positionAminoacid = domainData.start + i + 1;
                 
-        // Создаем данные для шаблона аминокислоты
         const aminoacidData = {
             position_aminoacid: positionAminoacid,
             aminoacid: aminoacid
         };
                 
-        // Создаем элемент аминокислоты
         const aminoacidHtml = compileTemplate('aminoacidTemplate', aminoacidData);
                 
-        // Создаем временный элемент для аминокислоты
         const tempSpan = document.createElement('span');
         tempSpan.innerHTML = aminoacidHtml;
         const aminoacidElement = tempSpan.firstElementChild;
                 
-        // Добавляем аминокислоту во фрагмент
         aminoacidsFragment.appendChild(aminoacidElement);
     }
         
-    // Добавляем все аминокислоты в контейнер последовательности
     sequenceContent.appendChild(aminoacidsFragment);
 
     return domainElement;
@@ -282,7 +265,6 @@ async function buildGene() {
         currentGene = data.gene;
         showStatus('Ген успешно построен!', 'success');
         
-        // Отображаем информацию
         displayGeneInfo(currentGene);
         
         start = performance.now();
@@ -294,7 +276,6 @@ async function buildGene() {
         console.log("Domains", performance.now() - start);
 
         
-        // Показываем содержимое
         document.getElementById('geneContent').style.display = 'flex';
         
     } catch (error) {
@@ -303,12 +284,9 @@ async function buildGene() {
     }
 }
 
-// Инициализация
 document.addEventListener('DOMContentLoaded', function() {
-    // Кнопка построения гена
     document.getElementById('buildGeneBtn').addEventListener('click', buildGene);
     
-    // Обработка Enter в полях формы
     document.getElementById('geneId').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') buildGene();
     });
