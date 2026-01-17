@@ -1,12 +1,16 @@
 ﻿// Основные переменные
 let currentGene = null;
+let compiledTemplates = {}; // Кэш для скомпилированных шаблонов
 
-// Функция для компиляции шаблонов
 function compileTemplate(templateId, data) {
-    const template = document.getElementById(templateId).innerHTML;
-    const compiled = _.template(template);
-    return compiled(data);
+    if (!compiledTemplates[templateId]) {
+        const template = document.getElementById(templateId).innerHTML;
+        compiledTemplates[templateId] = _.template(template);
+    }
+    
+    return compiledTemplates[templateId](data);
 }
+
 
 // Отображение статуса
 function showStatus(message, type = 'info') {
