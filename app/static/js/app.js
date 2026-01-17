@@ -279,7 +279,9 @@ async function buildGene() {
                 const number_codon = event.target.getAttribute('data-codon');
                 elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
                 elements.forEach(element => {
-                    element.setAttribute('style', 'color: white; background: black;');
+                    if (element.getAttribute('style') != 'display: none;') {
+                        element.setAttribute('style', 'color: white; background: black;');
+                    }
                 });
 
                 aminoacid = container.querySelector(`[data-position-aminoacid="${number_codon}"]`);
@@ -291,7 +293,9 @@ async function buildGene() {
                 const number_codon = event.target.getAttribute('data-position-aminoacid');
                 elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
                 elements.forEach(element => {
-                    element.setAttribute('style', 'color: white; background: black;');
+                    if (element.getAttribute('style') != 'display: none;') {
+                        element.setAttribute('style', 'color: white; background: black;');
+                    }
                 });
 
                 aminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
@@ -318,7 +322,9 @@ async function buildGene() {
                 const number_codon = event.target.getAttribute('data-position-aminoacid');
                 elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
                 elements.forEach(element => {
-                    element.setAttribute('style', '');
+                    if (element.getAttribute('style') != 'display: none;') {
+                        element.setAttribute('style', '');
+                    }
                 });
 
                 aminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
