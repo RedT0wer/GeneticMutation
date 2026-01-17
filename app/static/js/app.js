@@ -280,10 +280,15 @@ async function buildGene() {
         
         // Отображаем информацию
         displayGeneInfo(currentGene);
+        
         start = performance.now();
         displayExons(currentGene.base_sequence.exons);
-        console.log(performance.now() - start);
+        console.log("Exons", performance.now() - start);
+
+        start = performance.now();
         displayDomains(currentGene.protein.domains, currentGene.protein.length);
+        console.log("Domains", performance.now() - start);
+
         
         // Показываем содержимое
         document.getElementById('geneContent').style.display = 'flex';
