@@ -411,11 +411,10 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
 
 function Deletion(startPos, endPos, stop_codon_pos, new_domain, different_position) {
     // 1. Обновляем нуклеотиды и данные экзона после позиции вставки
-    const r = updateNucleotidesAfterInsertion(endPos, -(endPos - startPos + 1), stop_codon_pos + 3);
+    const r = updateNucleotidesAfterInsertion(endPos, -(endPos - startPos + 1), stop_codon_pos + (endPos - startPos + 2));
     
     last_pos = r.newPos; 
     last_nucleotide = r.element;
-
     // 2. Обновляем позиции экзонов
     updatePositionExon(startPos, last_pos);
 
@@ -567,7 +566,6 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
         if (currentPos > insertPos) {
             // Обновляем позицию
             const newPos = currentPos + insertLength;
-            //console.log(currentPos, newPos, i, stopCodonPos);
             element.setAttribute("data-position-nucleotide", newPos);
 
             // Обновляем номер кодона
@@ -581,7 +579,6 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
             
             // Обновляем классы кодона
             updateCodonClass(element, codonNumber);
-            
             // Помечаем стоп-кодон если необходимо
             if (i - 1 > stopCodonPos - 3 && i - 1 <= stopCodonPos) {
                 element.classList.add("stop_codon");

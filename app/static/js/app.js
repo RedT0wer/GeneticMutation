@@ -231,7 +231,7 @@ function createDomainElement(domainData) {
 
 // Построение гена через API
 async function buildGene() {
-    const source = document.getElementById('source-nucleotide').value;
+    const source = document.getElementById('source').value;
     const geneId = document.getElementById('geneId').value.trim();
     const proteinId = document.getElementById('proteinId').value.trim();
     
