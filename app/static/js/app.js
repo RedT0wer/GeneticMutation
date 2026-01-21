@@ -284,8 +284,10 @@ async function buildGene() {
                     }
                 });
 
-                aminoacid = container.querySelector(`[data-position-aminoacid="${number_codon}"]`);
-                aminoacid.setAttribute('style', 'color: white; background: black;');
+                aminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacids.forEach(aminoacid => {
+                    aminoacid.setAttribute('style', 'color: white; background: black;');
+                });
             }
         });
         container.addEventListener('mouseover', (event) => {
@@ -310,11 +312,15 @@ async function buildGene() {
                 const number_codon = event.target.getAttribute('data-codon');
                 elements = container.querySelectorAll(`[data-codon="${number_codon}"]`);
                 elements.forEach(element => {
-                    element.setAttribute('style', '');
+                    if (element.getAttribute('style') != 'display: none;') {
+                        element.setAttribute('style', '');
+                    }
                 });
 
-                aminoacid = container.querySelector(`[data-position-aminoacid="${number_codon}"]`);
-                aminoacid.setAttribute('style', '');
+                aaminoacids = container.querySelectorAll(`[data-position-aminoacid="${number_codon}"]`);
+                aminoacids.forEach(aminoacid => {
+                    aminoacid.setAttribute('style', '');
+                });
             }
         });
         container.addEventListener('mouseout', (event) => {

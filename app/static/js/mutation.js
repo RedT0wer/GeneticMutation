@@ -415,14 +415,15 @@ function Deletion(startPos, endPos, stop_codon_pos, new_domain, different_positi
     
     last_pos = r.newPos; 
     last_nucleotide = r.element;
-    // 2. Обновляем позиции экзонов
-    updatePositionExon(startPos, last_pos);
-
-    // 3. Обновляем стиль для удаленных
+    
+    // 2. Обновляем стиль для удаленных
     updateStyleNucleotide(startPos, endPos);
-
-    // 4. Скрываем все после стоп-кодона
+    
+    // 3. Скрываем все после стоп-кодона
     hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
+    
+    // 4. Обновляем позиции экзонов
+    updatePositionExonAfterDel(startPos);
     
     // 5. Скрыть все домены после
     hideDomain(endPos);
@@ -483,8 +484,10 @@ function updateStyleNucleotide(startPos, endPos) {
 
     while (startPos <= endPos) {
         nucleotide.classList.add("deletion");
-        nucleotide = nucleotide.nextElementSibling;
+        nucleotide.setAttribute("data-position-nucleotide", "-1");
+        nucleotide.setAttribute("data-codon", "-1");
         startPos++;
+        nucleotide = document.querySelector(`span[data-position-nucleotide="${startPos}"]`);
     }
 }
 
@@ -554,6 +557,52 @@ function updatePositionExon(insertPos, last_pos) {
         exon_meta_pos = exon_meta[1];
         exon_meta_pos.textContent = `Длина: ${exon.getAttribute("data-exon-end-pos") - exon.getAttribute("data-exon-start-pos") + 1}`;
     }
+}
+
+function updatePositionExonAfterDel(startPos) {
+    exons = document.querySelectorAll("div[class='exon-card']");
+
+    st_exon = findNucleotideAtPosition(Math.max(1, startPos - 1)).parentNode.parentNode;
+    st = parseInt(st_exon.getAttribute("data-exon-number")) - 1;
+    for(let i = st; i < exons.length; i++) {
+        exon = exons[i];
+        first = getFirstNucleotide(exon);
+        last = getLastNucleotide(exon);
+
+        exon.setAttribute("data-exon-start-pos", first.getAttribute("data-position-nucleotide"));
+        exon.setAttribute("data-exon-end-pos", last.getAttribute("data-position-nucleotide"));
+        exon.setAttribute("title", `Позиция: ${first.getAttribute("data-position-nucleotide")}-${last.getAttribute("data-position-nucleotide")}`);
+
+        exon_meta = exon.querySelectorAll("span[class='position-badge']");
+        exon_meta_pos = exon_meta[0];
+        exon_meta_pos.textContent = `Позиция: ${exon.getAttribute("data-exon-start-pos")}-${exon.getAttribute("data-exon-end-pos")}`;
+        exon_meta_pos = exon_meta[1];
+        exon_meta_pos.textContent = `Длина: ${exon.getAttribute("data-exon-end-pos") - exon.getAttribute("data-exon-start-pos") + 1}`;
+    }
+}
+
+function getFirstNucleotide(exon) {
+    nucleotides = exon.querySelectorAll("[data-position-nucleotide]");
+    for(let i = 0; i < nucleotides.length; i++) {
+        element = nucleotides[i];
+        position = parseInt(element.getAttribute("data-position-nucleotide"));
+        if (position != -1) {
+            return element;
+        }
+    }
+    return null;
+}
+
+function getLastNucleotide(exon) {
+    nucleotides = exon.querySelectorAll("[data-position-nucleotide]");
+    for(let i = nucleotides.length - 1; i >= 0; i--) {
+        element = nucleotides[i];
+        position = parseInt(element.getAttribute("data-position-nucleotide"));
+        if (position != -1 && element.getAttribute('style') != 'display: none;') {
+            return element;
+        }
+    }
+    return null;
 }
 
 function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) {
