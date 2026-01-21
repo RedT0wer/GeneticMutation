@@ -390,11 +390,11 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
     last_pos = r.newPos; 
     last_nucleotide = r.element;
 
-    // 3. Обновляем позиции экзонов
-    updatePositionExon(insertPos, last_pos);
-
-    // 4. Вставляем новые нуклеотиды
+    // 3. Вставляем новые нуклеотиды
     insertNewNucleotides(insertPos, sequence, insertionNucleotide);
+
+    // 4. Обновляем позиции экзонов
+    updatePositionExon(insertPos);
 
     // 5. Скрываем все после стоп-кодона
     hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
@@ -423,45 +423,13 @@ function Deletion(startPos, endPos, stop_codon_pos, new_domain, different_positi
     hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
     
     // 4. Обновляем позиции экзонов
-    updatePositionExonAfterDel(startPos);
+    updatePositionExon(startPos);
     
     // 5. Скрыть все домены после
     hideDomain(endPos);
 
     // 6. Вставить новый домен
     number = insertNewDomain(startPos, new_domain);
-
-    // 7. Присвоить стиль разным аминокислотым
-    updateStyleAminoacid(number, different_position);
-}
-
-function ExonDeletion(position, stop_codon_pos, new_domain, different_position) {
-    nucleotide = findNucleotideAtPosition(position);
-    current_exon = nucleotide.parentNode.parentNode;
-    st = parseInt(current_exon.getAttribute("data-exon-start-pos"));
-    end = parseInt(current_exon.getAttribute("data-exon-end-pos"));
-    console.log(current_exon, st, end);
-    // 1. Обновляем нуклеотиды и данные экзона после позиции вставки
-    const r = updateNucleotidesAfterInsertion(end, -(end - st + 1), stop_codon_pos + (currentGene.base_sequence.utr5.length));
-    
-    last_pos = r.newPos; 
-    last_nucleotide = r.element;
-    console.log(last_pos, last_nucleotide);
-
-    // 2. Обновляем позиции экзонов
-    updatePositionExon(end, last_pos);
-
-    // 3. Обновляем стиль для удаленных
-    updateStyleNucleotideExon(current_exon);
-
-    // 4. Скрываем все после стоп-кодона
-    hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
-    
-    // 5. Скрыть все домены после
-    hideDomain(end);
-
-    // 6. Вставить новый домен
-    number = insertNewDomain(st, new_domain);
 
     // 7. Присвоить стиль разным аминокислотым
     updateStyleAminoacid(number, different_position);
@@ -532,34 +500,7 @@ function updateStyleAminoacid(number, different_position) {
     });
 }
 
-function updatePositionExon(insertPos, last_pos) {
-    exons = document.querySelectorAll("div[class='exon-card']");
-    st_exon = findNucleotideAtPosition(insertPos).parentNode.parentNode;
-    st = parseInt(st_exon.getAttribute("data-exon-number")) - 1;
-    end_exon = findNucleotideAtPosition(last_pos).parentNode.parentNode;
-    end = parseInt(end_exon.getAttribute("data-exon-number")) - 1;
-    for(let i = st; i <= end; i++) {
-        exon = exons[i];
-        nucleotides = exon.querySelectorAll("span[data-position-nucleotide]");
-        first = nucleotides[0];
-        last = nucleotides[nucleotides.length - 1];
-        exon.setAttribute("data-exon-start-pos", Math.max(1, parseInt(first.getAttribute("data-position-nucleotide"))));
-
-        if (end_exon != exon) {
-            exon.setAttribute("data-exon-end-pos", parseInt(last.getAttribute("data-position-nucleotide")));
-        } else {
-            exon.setAttribute("data-exon-end-pos", parseInt(last_pos));
-        }
-
-        exon_meta = exon.querySelectorAll("span[class='position-badge']");
-        exon_meta_pos = exon_meta[0];
-        exon_meta_pos.textContent = `Позиция: ${exon.getAttribute("data-exon-start-pos")}-${exon.getAttribute("data-exon-end-pos")}`;
-        exon_meta_pos = exon_meta[1];
-        exon_meta_pos.textContent = `Длина: ${exon.getAttribute("data-exon-end-pos") - exon.getAttribute("data-exon-start-pos") + 1}`;
-    }
-}
-
-function updatePositionExonAfterDel(startPos) {
+function updatePositionExon(startPos) {
     exons = document.querySelectorAll("div[class='exon-card']");
 
     st_exon = findNucleotideAtPosition(Math.max(1, startPos - 1)).parentNode.parentNode;
