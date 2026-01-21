@@ -7,7 +7,6 @@ class MutationType(Enum):
     SUBSTITUTION = "substitution"
     INSERTION = "insertion"
     DELETION = "deletion"
-    EXON_DELETION = "exon_deletion"
 
 @dataclass
 class Mutation:
@@ -32,11 +31,6 @@ class DeletionMutation(Mutation):
     """Удаление нуклеотидов"""
     start_position: int
     end_position: int
-
-@dataclass
-class ExonDeletionMutation(Mutation):
-    """Удаление экзона"""
-    nucleotide_position: int
 
 @dataclass
 class BaseMutationResult:
@@ -70,20 +64,6 @@ class InsertionResult(BaseMutationResult):
 @dataclass
 class DeletionResult(BaseMutationResult):
     """Результат удаления нуклеотида"""
-    new_domain: ProteinDomain
-    different_position: int
-    stop_codon_position: int
-
-    def to_dict(self):
-        return {
-            "new_domain" : self.new_domain.to_dict(),
-            "different_position" : self.different_position,
-            "stop_codon_position" : self.stop_codon_position,
-        }
-
-@dataclass
-class ExonDeletionResult(BaseMutationResult):
-    """Результат удаления экзона"""
     new_domain: ProteinDomain
     different_position: int
     stop_codon_position: int

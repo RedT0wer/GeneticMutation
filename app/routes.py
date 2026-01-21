@@ -4,7 +4,7 @@ from .services.mutation_service import MutationService
 from .models.mutation_models import (
     Mutation, MutationType, 
     SubstitutionMutation, InsertionMutation, 
-    DeletionMutation, ExonDeletionMutation
+    DeletionMutation
 )
 from .models.gene_models import (
     Exon, ProteinDomain, UTR,
@@ -333,11 +333,6 @@ def _create_mutation_object(mutation_data):
             start_position=mutation_data.get('start_position'),
             end_position=mutation_data.get('end_position')
         )
-    elif mutation_type == MutationType.EXON_DELETION.name:
-        return ExonDeletionMutation(
-            mutation_type=MutationType.EXON_DELETION,
-            nucleotide_position=mutation_data.get('nucleotide_position')
-        )
     
     return None
 
@@ -349,7 +344,6 @@ def _get_mutation_description(mutation_type):
         MutationType.SUBSTITUTION: "Замена одного нуклеотида на другой",
         MutationType.INSERTION: "Вставка последовательности нуклеотидов",
         MutationType.DELETION: "Удаление последовательности нуклеотидов",
-        MutationType.EXON_DELETION: "Удаление целого экзона"
     }
     return descriptions.get(mutation_type, "Неизвестный тип мутации")
 

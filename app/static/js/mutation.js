@@ -118,7 +118,7 @@ function updateMutationForm(type) {
     const sequenceParam = document.getElementById('sequenceParam');
     const rangeParam = document.getElementById('rangeParam');
     const insertBetweenParam = document.getElementById('insertBetweenParam');
-    const exonParam = document.getElementById('exonParam');
+    //const exonParam = document.getElementById('exonParam');
     
     const sequenceInput = document.getElementById('mutationSequence');
     const positionInput = document.getElementById('mutationPosition');
@@ -132,15 +132,14 @@ function updateMutationForm(type) {
     sequenceParam.style.display = 'none';
     rangeParam.style.display = 'none';
     insertBetweenParam.style.display = 'none';
-    exonParam.style.display = 'none';
+    //exonParam.style.display = 'none';
     
     // Обновляем заголовок раздела
     const titles = {
         'find': 'Параметры поиска',
         'substitution': 'Параметры замены',
         'insertion': 'Параметры вставки',
-        'deletion': 'Параметры удаления',
-        'exon_deletion': 'Параметры удаления экзона'
+        'deletion': 'Параметры удаления'
     };
     
     if (titleElement) {
@@ -180,37 +179,6 @@ function updateMutationForm(type) {
             rangeParam.style.display = 'block';
             updateLabel('positionLabel', '<i class="fas fa-map-marker-alt"></i> Позиция удаления:');
             break;
-            
-        case 'exon_deletion':
-            positionParam.style.display = 'block';
-            updateLabel('positionLabel', '<i class="fas fa-map-marker-alt"></i> Позиция для удаления:');
-            positionInput.placeholder = 'Введите номер нуклеотида';
-            
-            // Заполняем список экзонов
-            const exonSelect = document.getElementById('exonSelect');
-            if (exonSelect) {
-                exonSelect.innerHTML = '<option value="">-- Выберите экзон --</option>';
-                // Добавляем экзоны из DOM если они есть
-                const exonCards = document.querySelectorAll('.exon-card');
-                if (exonCards.length > 0) {
-                    exonCards.forEach(card => {
-                        const exonNum = card.dataset.exonNumber;
-                        const option = document.createElement('option');
-                        option.value = exonNum;
-                        option.textContent = `Экзон ${exonNum}`;
-                        exonSelect.appendChild(option);
-                    });
-                } else {
-                    // Демо экзоны
-                    for (let i = 1; i <= 5; i++) {
-                        const option = document.createElement('option');
-                        option.value = i;
-                        option.textContent = `Экзон ${i}`;
-                        exonSelect.appendChild(option);
-                    }
-                }
-            }
-            break;
     }
     
     // Обновляем текст кнопки применения
@@ -220,8 +188,7 @@ function updateMutationForm(type) {
             'find': '<i class="fas fa-search"></i> Найти',
             'substitution': '<i class="fas fa-exchange-alt"></i> Заменить',
             'insertion': '<i class="fas fa-plus"></i> Вставить',
-            'deletion': '<i class="fas fa-minus"></i> Удалить',
-            'exon_deletion': '<i class="fas fa-trash-alt"></i> Удалить экзон'
+            'deletion': '<i class="fas fa-minus"></i> Удалить'
         };
         applyBtn.innerHTML = buttonTexts[type] || '<i class="fas fa-play"></i> Выполнить';
     }
@@ -300,13 +267,6 @@ function validateInputs(type, position, sequence, startPos, endPos, insertPos, e
             }
             if (parseInt(endPos) <= parseInt(startPos)) {
                 showError('Конечная позиция должна быть больше начальной');
-                return false;
-            }
-            break;
-            
-        case 'exon_deletion':
-            if (!exon) {
-                showError('Выберите экзон для удаления');
                 return false;
             }
             break;
@@ -792,19 +752,9 @@ function showResult(type, data, apiResult) {
             resultHTML = `
                 <p><strong>Удаление выполнено</strong></p>
                 <p>Диапазон: <strong>${data.startPos} - ${data.endPos}</strong></p>
-                <p>Удалены нуклеотиды: <strong>${1}</strong></p>
+                <p>Удалены нуклеотиды: <strong></strong></p>
                 <p>Статус: <strong>Успешно</strong></p>
                 <p class="success"><i class="fas fa-check-circle"></i> Удаление применено</p>
-            `;
-            break;
-            
-        case 'exon_deletion':
-            ExonDeletion(parseInt(data.position), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position);
-            resultHTML = `
-                <p><strong>Экзон удален</strong></p>
-                <p>Удаленный экзон: <strong>Экзон ${data.position}</strong></p>
-                <p>Статус: <strong>Успешно</strong></p>
-                <p class="success"><i class="fas fa-check-circle"></i> Экзон удален</p>
             `;
             break;
     }
@@ -856,8 +806,7 @@ function getTypeName(type) {
         'find': 'поиск',
         'substitution': 'замена',
         'insertion': 'вставка',
-        'deletion': 'удаление',
-        'exon_deletion': 'удаление экзона'
+        'deletion': 'удаление'
     };
     return names[type] || 'действие';
 }

@@ -195,98 +195,6 @@ class DeletionStrategy(SequenceMutationStrategy):
             stop_codon_position=stop_codon
         )
 
-
-class ExonDeletionStrategy(SequenceMutationStrategy):
-    """Стратегия для удаления экзона"""
-    
-    def _is_first_exon(self, exon: Exon, gene: Gene) -> bool:
-        return exon == self._find_exon_by_position(self._translate_nucleotide_position(1, gene.base_sequence.utr5), gene)
-    
-    def _calculate_start_position(self, gene: Gene, exon_to_delete: Exon) -> int:
-        if exon_to_delete.number == 1:
-            return 0
-        elif self._is_first_exon(exon_to_delete, gene):
-            return exon_to_delete.start_position
-        else:
-            exon = gene.base_sequence.exons[exon_to_delete.number - 2]
-            return exon.end_position - exon.end_phase + 1
-
-    def _build_mutated_sequence(self, original_sequence: str, exon_to_delete: Exon, utr3: UTR) -> str:
-        """Построить мутированную последовательность с вставкой"""
-        return original_sequence[:exon_to_delete.start_position] + original_sequence[exon_to_delete.end_position + 1:utr3.start_position]
-
-    def _calculate_protein_result(self, mutated_sequence: str,
-                                translation_start: int, protein_domain: ProteinDomain, 
-                                gene: Gene) -> Tuple[ProteinDomain, int, int]:
-        """Рассчитать результат мутации для домена белка"""
-
-        # Транслируем до стоп-кодона или конца
-        translated_result = self.translation_service.translation_sequence(
-            mutated_sequence, 
-            translation_start, 
-            (len(mutated_sequence) - translation_start) // 3 * 3 - 1
-        )
-        
-        # Находим стоп-кодон в транслированной последовательности
-        if translation_start + len(translated_result) * 3 >= gene.base_sequence.utr3.start_position:
-            stop_codon_pos = -1
-        else:
-            stop_codon_pos = translation_start + (len(translated_result) - 1) * 3
-
-        sequence=protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result
-
-        # Находим позицию, с которой началась мутация
-        diff_pos = (translation_start - gene.base_sequence.utr5.length) // 3
-        while diff_pos < len(sequence) + protein_domain.start and sequence[diff_pos - protein_domain.start] == gene.protein.sequence[diff_pos]:
-            diff_pos += 1
-
-        # Создаем новый домен
-        new_domain = ProteinDomain(
-            name=f"{protein_domain.name}_mutated",
-            start=0,
-            end=len(translated_result) - 1,
-            sequence=sequence,
-            type=protein_domain.type
-        )
-        
-        return new_domain, diff_pos, stop_codon_pos
-
-    def execute(self, mutation: ExonDeletionMutation, gene: Gene) -> BaseMutationResult:
-        nucleotide_position = mutation.nucleotide_position
-
-        # Переводим позицию с учетом UTR5
-        global_position = self._translate_nucleotide_position(nucleotide_position, gene.base_sequence.utr5)
-
-        # Находим экзон для удаления
-        exon_to_delete = self._find_exon_by_position(global_position, gene)
-
-        # Строим мутированную последовательность
-        original_sequence = gene.base_sequence.full_sequence
-        mutated_sequence = self._build_mutated_sequence(
-            original_sequence, exon_to_delete, gene.base_sequence.utr3
-        )
-
-        # Считаем стартовую позицию для мутации
-        start_position = self._calculate_start_position(gene, exon_to_delete)
-        
-        # Получаем затронутые белковые домены
-        protein_domain = self._get_protein_domain_at_position(gene, start_position - gene.base_sequence.utr5.length)
-        
-        # Для каждого затронутого домена строим результат
-        new_domain, diff_pos, stop_codon = self._calculate_protein_result(
-            mutated_sequence,
-            start_position,
-            protein_domain,
-            gene
-        )
-
-        return ExonDeletionResult(
-            new_domain=new_domain,
-            different_position=diff_pos,
-            stop_codon_position=stop_codon
-        )
-
-
 @dataclass
 class MutationService:
     """Сервис для обработки мутаций с использованием паттерна Стратегия"""
@@ -298,8 +206,7 @@ class MutationService:
             self.strategies = {
                 MutationType.SUBSTITUTION: SubstitutionStrategy(),
                 MutationType.INSERTION: InsertionStrategy(),
-                MutationType.DELETION: DeletionStrategy(),
-                MutationType.EXON_DELETION: ExonDeletionStrategy()
+                MutationType.DELETION: DeletionStrategy()
             }
     
     def apply_mutation(self, mutation: Mutation, gene: Gene) -> BaseMutationResult:
