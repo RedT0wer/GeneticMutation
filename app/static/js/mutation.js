@@ -510,9 +510,13 @@ function updatePositionExon(startPos) {
         first = getFirstNucleotide(exon);
         last = getLastNucleotide(exon);
 
-        exon.setAttribute("data-exon-start-pos", first.getAttribute("data-position-nucleotide"));
-        exon.setAttribute("data-exon-end-pos", last.getAttribute("data-position-nucleotide"));
-        exon.setAttribute("title", `Позиция: ${first.getAttribute("data-position-nucleotide")}-${last.getAttribute("data-position-nucleotide")}`);
+        if (first) {
+            exon.setAttribute("data-exon-start-pos", first.getAttribute("data-position-nucleotide")); 
+        }
+        if (last) {
+            exon.setAttribute("data-exon-end-pos", last.getAttribute("data-position-nucleotide"));
+        }
+        exon.setAttribute("title", `Позиция: ${exon.getAttribute('data-exon-start-pos')}-${exon.getAttribute('data-exon-end-pos')}`);
 
         exon_meta = exon.querySelectorAll("span[class='position-badge']");
         exon_meta_pos = exon_meta[0];
