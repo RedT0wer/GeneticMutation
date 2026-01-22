@@ -516,10 +516,10 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
     for(let i = 0; i < nucleotides.length; i++) {
         element = nucleotides[i];
         const currentPos = parseInt(element.getAttribute("data-position-nucleotide"));
-        
+        // Обновляем позицию
+        const newPos = currentPos + insertLength;
+
         if (currentPos > insertPos) {
-            // Обновляем позицию
-            const newPos = currentPos + insertLength;
             element.setAttribute("data-position-nucleotide", newPos);
 
             // Обновляем номер кодона
@@ -533,12 +533,13 @@ function updateNucleotidesAfterInsertion(insertPos, insertLength, stopCodonPos) 
             
             // Обновляем классы кодона
             updateCodonClass(element, codonNumber);
-            // Помечаем стоп-кодон если необходимо
-            if (i - 1 > stopCodonPos - 3 && i - 1 <= stopCodonPos) {
-                element.classList.add("stop_codon");
-            } else if (i - 1 > stopCodonPos) {
-                return { newPos: newPos - 1, element: element };
-            }
+        }
+
+        // Помечаем стоп-кодон если необходимо
+        if (i - 1 > stopCodonPos - 3 && i - 1 <= stopCodonPos) {
+            element.classList.add("stop_codon");
+        } else if (i - 1 > stopCodonPos) {
+            return { newPos: newPos - 1, element: element };
         }
     }
 }

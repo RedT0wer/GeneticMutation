@@ -62,10 +62,7 @@ class SequenceMutationStrategy(MutationStrategy):
         )
         
         # Находим стоп-кодон в транслированной последовательности
-        if translation_start + len(translated_result) * 3 >= gene.base_sequence.utr3.start_position:
-            stop_codon_pos = -1
-        else:
-            stop_codon_pos = translation_start + (len(translated_result) - 1) * 3
+        stop_codon_pos = translation_start + (len(translated_result) - 1) * 3
 
         sequence = protein_domain.sequence[:((translation_start - gene.base_sequence.utr5.length) // 3) - protein_domain.end - 1] + translated_result
 
@@ -162,7 +159,7 @@ class DeletionStrategy(SequenceMutationStrategy):
     def _build_mutated_sequence(self, original_sequence: str, 
                               start_pos: int, end_pos: int, utr3: UTR) -> str:
         """Построить мутированную последовательность с удалением"""
-        return original_sequence[:start_pos] + original_sequence[end_pos + 1:utr3.start_position]
+        return original_sequence[:start_pos] + original_sequence[end_pos + 1:]
     
     def execute(self, mutation: DeletionMutation, gene: Gene) -> BaseMutationResult:
         start_position = mutation.start_position
