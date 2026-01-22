@@ -353,11 +353,11 @@ function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_po
     // 3. Вставляем новые нуклеотиды
     insertNewNucleotides(insertPos, sequence, insertionNucleotide);
 
-    // 4. Обновляем позиции экзонов
-    updatePositionExon(insertPos);
-
-    // 5. Скрываем все после стоп-кодона
+    // 4. Скрываем все после стоп-кодона
     hideExonsAndNucleotidesAfterStopCodon(last_nucleotide);
+
+    // 5. Обновляем позиции экзонов
+    updatePositionExon(insertPos);
 
     // 6. Скрыть все домены после
     hideDomain(insertPos);
