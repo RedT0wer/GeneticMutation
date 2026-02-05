@@ -3,9 +3,9 @@
 if __name__ == '__main__':
     app = create_app()
     
+    # pyinstaller --onefile --add-data "app;app" --add-data "config.py;." run.py
     print("Запуск Genetic Mutation Analyzer...")
-    print("API доступно по адресу: http://localhost:5000")
-    print("Документация API: http://localhost:5000/api/")
+    print("Сайт доступно по адресу: http://localhost:5000")
     print("-" * 50)
     
     app.run(
