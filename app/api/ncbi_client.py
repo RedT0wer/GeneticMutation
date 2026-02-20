@@ -2,7 +2,7 @@
 import xmltodict
 from typing import List, Dict, Any, Optional, Tuple
 import httpx
-from .api_utils import APIUtils, APIError, retry_on_failure
+from .api_utils import APIError, retry_on_failure
 from ..models.gene_models import Exon
 from config import config
 
@@ -10,10 +10,6 @@ class NCBIClient:
     """Клиент для работы с NCBI EUtils API"""
     
     def __init__(self):
-        self.api = APIUtils(
-            base_url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
-            #cache_config=CacheConfig(enabled=True, default_ttl=86400)
-        )
         self.logger = logging.getLogger(__name__)
     
     async def get_exons_data(self, identifier: str) -> List[Exon]:

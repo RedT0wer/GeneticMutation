@@ -1,18 +1,14 @@
 ﻿import logging
 from typing import List, Dict, Any, Optional, Tuple
 import httpx
-from .api_utils import APIUtils, APIError, retry_on_failure
+from .api_utils import APIError, retry_on_failure
 from ..models.gene_models import Exon
 from config import config
 
 class EnsemblClient:
-    """Клиент для работы с Ensembl REST API (обновленная версия)"""
+    """Клиент для работы с Ensembl REST API"""
     
     def __init__(self):
-        self.api = APIUtils(
-            base_url="https://rest.ensembl.org",
-            #cache_config=CacheConfig(enabled=True, default_ttl=7200)
-        )
         self.logger = logging.getLogger(__name__)
     
     async def get_exons_data(self, gene_id: str) -> List[Exon]:

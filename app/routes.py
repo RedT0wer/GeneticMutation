@@ -11,11 +11,9 @@ from .models.gene_models import (
     BaseSequence, Protein,
     Gene
 )
-from .utils.validators import Validators
 
 # Создаем blueprint для API
 api_bp = Blueprint('api', __name__)
-validators = Validators()
 mutation_service = MutationService()
 gene_service = GeneService()
 
@@ -359,13 +357,3 @@ def method_not_allowed(error):
 @api_bp.errorhandler(500)
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
-
-# Дополнительные маршруты для отладки и тестирования
-@api_bp.route('/health', methods=['GET'])
-def health_check():
-    """Проверка работоспособности API"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'Gene Mutation API',
-        'version': '1.0.0'
-    }), 200

@@ -1,17 +1,13 @@
 ﻿import logging
 from typing import Dict, List, Tuple, Any, Optional
 import httpx
-from .api_utils import APIUtils, APIError, retry_on_failure
+from .api_utils import APIError, retry_on_failure
 from config import config
 
 class UniProtClient:
     """Клиент для работы с UniProt REST API"""
     
     def __init__(self):
-        self.api = APIUtils(
-            base_url="https://rest.uniprot.org/uniprotkb",
-            #cache_config=CacheConfig(enabled=True, default_ttl=86400)
-        )
         self.logger = logging.getLogger(__name__)
     
     async def get_sequence_data(self, identifier: str) -> str:

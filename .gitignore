@@ -1,4 +1,4 @@
 ﻿.vs
 .venv
 **/__pycache__
-start.bat
+.pytest_cache
