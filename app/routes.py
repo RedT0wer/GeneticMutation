@@ -108,63 +108,6 @@ def apply_mutation():
     except Exception as e:
         return jsonify({'error': f'Error applying mutation: {str(e)}'}), 500
 
-@api_bp.route('/gene/mutate/batch', methods=['POST'])
-def apply_batch_mutations():
-    """
-    Применить несколько мутаций к гену
-    """
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'error': 'No JSON data provided'}), 400
-        
-        gene_data = data.get('gene')
-        if not gene_data:
-            return jsonify({'error': 'Gene data is required'}), 400
-        
-        mutations_data = data.get('mutations', [])
-        if not mutations_data:
-            return jsonify({'error': 'Mutations data is required'}), 400
-        
-        # Строим объект Gene
-        gene = _dict_to_gene(gene_data)
-        
-        results = []
-        for mutation_data in mutations_data:
-            try:
-                mutation = _create_mutation_object(mutation_data)
-                if mutation:
-                    result = mutation_service.apply_mutation(mutation, gene)
-                    result_dict = _mutation_result_to_dict(result)
-                    results.append({
-                        'mutation': mutation_data,
-                        'result': result_dict,
-                        'success': True
-                    })
-                else:
-                    results.append({
-                        'mutation': mutation_data,
-                        'result': None,
-                        'success': False,
-                        'error': 'Invalid mutation data'
-                    })
-            except Exception as e:
-                results.append({
-                    'mutation': mutation_data,
-                    'result': None,
-                    'success': False,
-                    'error': str(e)
-                })
-        
-        return jsonify({
-            'success': True,
-            'results': results
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': f'Error applying batch mutations: {str(e)}'}), 500
-
 @api_bp.route('/mutation/types', methods=['GET'])
 def get_mutation_types():
     """
