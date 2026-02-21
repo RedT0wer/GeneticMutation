@@ -26,7 +26,7 @@
 
 ## 📡 API Endpoints
 
-**1. Построение гена**
+### 1. Построение гена
 
 ```http
 POST /api/gene/build
@@ -64,7 +64,7 @@ POST /api/gene/build
 }
 ```
 
-## 2. Применение мутации
+### 2. Применение мутации
 
 ```http
 POST /api/gene/mutate
@@ -160,7 +160,7 @@ POST /api/gene/mutate
 }
 ```
 
-## 3. Получение типов мутаций
+### 3. Получение типов мутаций
 ```http
 GET /api/mutation/types
 ```
@@ -185,7 +185,7 @@ GET /api/mutation/types
 }
 ```
 
-### Ответы с ошибками
+### 4. Ответы с ошибками
 
 **400 Bad Request:**
 ```json
