@@ -1,7 +1,6 @@
 Flask==3.1.2
 httpx==0.28.1
 numpy==2.3.4
-biopython==1.86
 pyinstaller==6.18.0
 pytest==8.4.2
 requests==2.32.5
