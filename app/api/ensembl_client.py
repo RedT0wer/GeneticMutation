@@ -21,7 +21,7 @@ class EnsemblClient:
             # Получаем расширенную информацию о гене
             gene_data = await self._get_gene_with_exons(gene_id)
             # Получаем последовательности экзонов
-            exon_sequences = await self._get_exon_sequences(gene_id)
+            exon_sequences = await self._get_sequence(gene_id)
             
             return self._process_exons_data(gene_data, exon_sequences)
         except Exception as e:
@@ -54,25 +54,6 @@ class EnsemblClient:
             response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
             if not response.is_success:
                 raise APIError(f"Ensembl API error: {response.status_code}")
-            
-            return response.json()
-    
-    @retry_on_failure(max_retries=3, delay=1.0)
-    @cache.cached
-    async def _get_exon_sequences(self, transcript_id: str, task: str = "seq") -> Dict[str, Any]:
-        """Получить последовательности экзонов"""
-        url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
-        params = {
-            "mask_feature": "1",
-            "type": "cdna", 
-            "content-type": "application/json",
-            "multiple_sequences": "1"
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
-            if not response.is_success:
-                raise APIError(f"Ensembl sequence API error: {response.status_code}")
             
             return response.json()
     
