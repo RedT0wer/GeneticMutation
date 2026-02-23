@@ -58,7 +58,7 @@ class SequenceMutationStrategy(MutationStrategy):
         translated_result = self.translation_service.translation_sequence(
             mutated_sequence, 
             translation_start, 
-            (len(mutated_sequence) - translation_start) // 3 * 3 - 1
+            translation_start + 3 * ((len(mutated_sequence) - translation_start) // 3 - 1)
         )
         
         # Находим стоп-кодон в транслированной последовательности
