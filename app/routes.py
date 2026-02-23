@@ -51,9 +51,6 @@ async def build_gene():
         elif source == 'ncbi':
             gene = await gene_service.build_gene_from_ncbi(gene_id, protein_id)
         
-        if not gene:
-            return jsonify({'error': 'Failed to build gene structure'}), 500
-        
         # Преобразование гена в словарь для JSON
         gene_dict = _gene_to_dict(gene)
         
