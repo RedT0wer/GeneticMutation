@@ -85,7 +85,7 @@ class CacheService:
                 return await loop.run_in_executor(None, read)
 
             result = await func(*args, **kwargs)
-            print(path, type(result))
+
             def write():
                 with open(path, "w", encoding="utf-8") as f:
                     json.dump(result, f, ensure_ascii=False)
