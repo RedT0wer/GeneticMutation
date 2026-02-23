@@ -298,6 +298,17 @@ function Find(position) {
     domain = sequence_content.parentNode;
     domain_name = domain.getAttribute("data-domain-name");
 
+    // Прокрутка к найденному элементу
+    setTimeout(() => {
+        if (nucleotide) {
+            nucleotide.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+            });
+        }
+    }, 100);
+
     result = {
         "nucleotide": nucleotide.innerText,
         "aminoacid": aminoacid.innerText,
@@ -710,11 +721,12 @@ async function applyMutation(type, data) {
 // 2.3)
 function showResult(type, data, apiResult) {
     const resultDiv = document.getElementById('mutationResult');
-    
     let resultHTML = '';
+    let scrollPosition = null;
 
     switch(type) {
         case 'find':
+            scrollPosition = parseInt(data.position);
             resultHTML = `
                 <p><strong>Результат поиска</strong></p>
                 <p>Найдено в экзоне: <strong>Экзон ${apiResult.exon_number}</strong></p>
@@ -726,6 +738,7 @@ function showResult(type, data, apiResult) {
             break;
 
         case 'substitution':
+            scrollPosition = parseInt(data.position);
             Substitution(parseInt(data.position), data.sequence.toUpperCase(), apiResult.new_aminoacid);
             resultHTML = `
                 <p><strong>Замена выполнена</strong></p>
@@ -738,6 +751,7 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'insertion':
+            scrollPosition = parseInt(data.insertPos);
             Insertion(parseInt(data.insertPos), data.sequence.toUpperCase(), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position);
             resultHTML = `
                 <p><strong>Вставка выполнена</strong></p>
@@ -749,6 +763,7 @@ function showResult(type, data, apiResult) {
             break;
             
         case 'deletion':
+            scrollPosition = parseInt(data.startPos);
             Deletion(parseInt(data.startPos), parseInt(data.endPos), apiResult.stop_codon_position, apiResult.new_domain, apiResult.different_position)
             resultHTML = `
                 <p><strong>Удаление выполнено</strong></p>
@@ -762,6 +777,57 @@ function showResult(type, data, apiResult) {
     
     resultDiv.innerHTML = resultHTML;
     resultDiv.style.borderLeftColor = '#28a745';
+
+    // Добавляем прокрутку к месту мутации
+    if (scrollPosition) {
+        scrollToMutation(scrollPosition);
+    }
+}
+
+// Новая функция для точной прокрутки к позиции
+function scrollToMutation(position) {
+    // Сначала прокручиваем к нуклеотиду в экзонах
+    const nucleotide = findNucleotideAtPosition(position);
+    if (nucleotide) {
+        // Находим контейнер экзонов
+        const exonsContainer = document.getElementById('exonsContainer');
+        const exonCard = nucleotide.closest('.exon-card');
+        
+        if (exonCard && exonsContainer) {
+            // Прокручиваем контейнер экзонов так, чтобы элемент был в центре
+            const containerRect = exonsContainer.getBoundingClientRect();
+            const elementRect = nucleotide.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top + exonsContainer.scrollTop;
+            const targetScroll = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+            
+            exonsContainer.scrollTo({
+                top: targetScroll,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Затем прокручиваем к аминокислоте в доменах (с небольшой задержкой)
+    setTimeout(() => {
+        const aminoacid = FindAminoacid(position);
+        if (aminoacid) {
+            const domainsContainer = document.getElementById('domainsContainer');
+            const domainCard = aminoacid.closest('.domain-card');
+            
+            if (domainCard && domainsContainer) {
+                // Прокручиваем контейнер доменов
+                const containerRect = domainsContainer.getBoundingClientRect();
+                const elementRect = aminoacid.getBoundingClientRect();
+                const relativeTop = elementRect.top - containerRect.top + domainsContainer.scrollTop;
+                const targetScroll = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+                
+                domainsContainer.scrollTo({
+                    top: targetScroll,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, 500); // Задержка, чтобы сначала прокрутились экзоны
 }
 
 // 1)
