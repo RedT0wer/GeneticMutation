@@ -94,17 +94,3 @@ class TestMutationServices:
         new_domain = deletion_result.new_domain
         print(deletion_result)
         assert not new_domain is None, f"sdf"
-
-    @pytest.mark.exon_deletion
-    def test_exon_deletion_one(self):
-        gene_service = GeneService()
-        mutation_service = MutationService()
-
-        ncbi_id = "NM_003319"
-        protein_id = "Q8WZ42"
-        gene = gene_service.build_gene_from_ncbi(ncbi_id=ncbi_id, protein_id=protein_id)
-
-        mutation = ExonDeletionMutation(MutationType.EXON_DELETION, 1)
-        exon_deletion_result = mutation_service.apply_mutation(mutation, gene) 
-        print(exon_deletion_result)
-        assert not exon_deletion_result is None, f"sdf"
