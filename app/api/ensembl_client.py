@@ -52,8 +52,9 @@ class EnsemblClient:
         
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
+
             if not response.is_success:
-                raise APIError(f"Ensembl API error: {response.status_code}")
+                raise APIError(f"Ensembl API error: {response.json().get("error")}")
             
             return response.json()
     
@@ -71,7 +72,7 @@ class EnsemblClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{url}?{'&'.join([f'{k}={v}' for k, v in params.items()])}")
             if not response.is_success:
-                raise APIError(f"Ensembl sequence API error: {response.status_code}")
+                raise APIError(f"Ensembl sequence API error: {response.json().get("error")}")
             
             return response.json()
     
