@@ -285,7 +285,7 @@ class GeneService:
                 elif domains and domains[-1].start + 1 < index:
                     prev = domains[-1]
                     connection = ProteinDomain(
-                        name="Connection",
+                        name=f"Connection",
                         start=prev.end + 1,
                         end=index - 1,
                         sequence=protein_sequence[prev.end + 1:index],
@@ -310,6 +310,18 @@ class GeneService:
                 type="unknown"
             )
             domains.append(connection)
+
+        for i,domain in enumerate(domains):
+            if domain.name == "Connection":
+                arr = []
+                prev = domains[i - 1].name if i > 1 else ""
+                if prev: arr.append(prev)
+
+                arr.append(domain.name)
+
+                next = domains[i + 1].name if i < len(domains)-1 else ""
+                if next: arr.append(next)
+                domain.name = " -> ".join(arr)
             
         # 4. Создаём объект Protein
         protein = Protein(
