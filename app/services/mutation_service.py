@@ -74,7 +74,7 @@ class SequenceMutationStrategy(MutationStrategy):
 
         # Создаем новый домен
         new_domain = ProteinDomain(
-            name=f"{protein_domain.name}_mutated",
+            name=f"{protein_domain.name} (mutated)",
             start=protein_domain.start,
             end=protein_domain.start + len(sequence) - 1,
             sequence=sequence,
