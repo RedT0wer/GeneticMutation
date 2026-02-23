@@ -20,7 +20,6 @@ class UniProtClient:
             data = await self._fetch_uniprot_seq(identifier)
             return self._process_sequence_data(data)
         except Exception as e:
-            self.logger.error(f"Failed to get UniProt sequence for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt sequence: {e}")
     
     async def get_protein_domains(self, identifier: str) -> List[Tuple[int, int, str]]:
@@ -32,7 +31,6 @@ class UniProtClient:
             data = await self._fetch_uniprot_dom(identifier)
             return self._process_domains_data(data)
         except Exception as e:
-            self.logger.error(f"Failed to get UniProt domains for {identifier}: {e}")
             raise APIError(f"Failed to get UniProt domains: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
@@ -44,7 +42,8 @@ class UniProtClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             if not response.is_success:
-                raise APIError(f"UniProt API error: {response.status_code}")
+                message = response.json()["messages"][0]
+                raise APIError(f"UniProt API error: {message}")
             
             return response.json()
 
@@ -57,7 +56,8 @@ class UniProtClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             if not response.is_success:
-                raise APIError(f"UniProt API error: {response.status_code}")
+                message = response.json()["messages"][0]
+                raise APIError(f"UniProt API error: {message}")
             
             return response.json()
     
@@ -69,10 +69,8 @@ class UniProtClient:
             return sequence
             
         except KeyError as e:
-            self.logger.error(f"Sequence data not found in UniProt response: {e}")
             raise APIError(f"Invalid UniProt response format: {e}")
         except Exception as e:
-            self.logger.error(f"Error processing UniProt sequence: {e}")
             raise APIError(f"Failed to process UniProt sequence: {e}")
     
     def _process_domains_data(self, data: Dict) -> List[Tuple[int, int, str]]:
@@ -100,7 +98,6 @@ class UniProtClient:
             return sorted(domains, key=lambda x: x[0])
             
         except Exception as e:
-            self.logger.error(f"Error processing UniProt domains: {e}")
             raise APIError(f"Failed to process UniProt domains: {e}")
     
     # Старые методы для обратной совместимости
