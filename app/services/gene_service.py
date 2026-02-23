@@ -25,155 +25,140 @@ class GeneService:
             gene_id: ENSEMBL ID (например, ENSG00000139618)
             protein_id: UniProt ID (например, P04637)
         """
-        try:
-            logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
+        logger.info(f"Building gene: Ensembl={gene_id}, UniProt={protein_id}")
         
-            # 1. Запускаем все три корутины одновременно
-            exons_task = self.ensembl_client.get_exons_legacy(gene_id)
-            sequence_task = self.ensembl_client.get_sequence_data(gene_id)
-            protein_task = self._build_protein_from_uniprot(protein_id)
+        # 1. Запускаем все три корутины одновременно
+        exons_task = self.ensembl_client.get_exons_legacy(gene_id)
+        sequence_task = self.ensembl_client.get_sequence_data(gene_id)
+        protein_task = self._build_protein_from_uniprot(protein_id)
         
-            # 2. Ожидаем завершения всех трех задач
-            raw_exons, sequence_data, protein = await asyncio.gather(
-                exons_task,
-                sequence_task,
-                protein_task,
-                return_exceptions=True  # Обрабатываем исключения по отдельности
-            )
+        # 2. Ожидаем завершения всех трех задач
+        raw_exons, sequence_data, protein = await asyncio.gather(
+            exons_task,
+            sequence_task,
+            protein_task,
+            return_exceptions=True  # Обрабатываем исключения по отдельности
+        )
         
-            # 3. Проверяем результаты на исключения
-            if isinstance(raw_exons, Exception):
-                raise Exception(f"Failed to get exons: {raw_exons}")
-            if isinstance(sequence_data, Exception):
-                raise Exception(f"Failed to get sequence data: {sequence_data}")
-            if isinstance(protein, Exception):
-                raise Exception(f"Failed to get protein: {protein}")
+        # 3. Проверяем результаты на исключения
+        if isinstance(raw_exons, Exception):
+            raise Exception(f"Failed to get exons: {raw_exons}")
+        if isinstance(sequence_data, Exception):
+            raise Exception(f"Failed to get sequence data: {sequence_data}")
+        if isinstance(protein, Exception):
+            raise Exception(f"Failed to get protein: {protein}")
         
-            # Распаковываем данные последовательности
-            sequence, utr5_start, utr3_start = sequence_data
+        # Распаковываем данные последовательности
+        sequence, utr5_start, utr3_start = sequence_data
         
-            # 4. Создаём UTR объекты
-            utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
+        # 4. Создаём UTR объекты
+        utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
-            # 5. Создание экзонов
-            exons = self._build_exons(raw_exons, utr5, utr3)
+        # 5. Создание экзонов
+        exons = self._build_exons(raw_exons, utr5, utr3)
         
-            # 6. Создаём базовую последовательность
-            base_sequence = BaseSequence(
-                identifier=gene_id,
-                length=len(sequence),
-                exons=exons,
-                utr3=utr3,
-                utr5=utr5,
-                full_sequence=sequence
-            )
+        # 6. Создаём базовую последовательность
+        base_sequence = BaseSequence(
+            identifier=gene_id,
+            length=len(sequence),
+            exons=exons,
+            utr3=utr3,
+            utr5=utr5,
+            full_sequence=sequence
+        )
         
-            # 7. Создание транслируемого белка
-            translated_protein = self._translated_base_nucleotide(base_sequence, protein)
+        # 7. Создание транслируемого белка
+        translated_protein = self._translated_base_nucleotide(base_sequence, protein)
         
-            # 8. Создаём ген
-            gene = Gene(
-                protein=translated_protein,
-                base_sequence=base_sequence
-            )
+        # 8. Создаём ген
+        gene = Gene(
+            protein=translated_protein,
+            base_sequence=base_sequence
+        )
         
-            logger.info(f"Gene built: {len(exons)} exons, {len(protein.domains)} domains")
-            return gene
-            
-        except Exception as e:
-            logger.error(f"Error building gene from Ensembl: {e}", exc_info=True)
-            return None
-    
+        logger.info(f"Gene built: {len(exons)} exons, {len(protein.domains)} domains")
+        return gene
+
     async def build_gene_from_ncbi(self, ncbi_id: str, protein_id: str) -> Optional[Gene]:
         """
         Построить ген из данных NCBI + UniProt
         """
-        try:
-            logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
+        logger.info(f"Building gene: NCBI={ncbi_id}, UniProt={protein_id}")
             
-            # 1. Запускаем все три корутины одновременно
-            exons_task = self.ncbi_client.get_exons_legacy(ncbi_id)
-            sequence_task = self.ncbi_client.get_sequence_data(ncbi_id)
-            protein_task = self._build_protein_from_uniprot(protein_id)
+        # 1. Запускаем все три корутины одновременно
+        exons_task = self.ncbi_client.get_exons_legacy(ncbi_id)
+        sequence_task = self.ncbi_client.get_sequence_data(ncbi_id)
+        protein_task = self._build_protein_from_uniprot(protein_id)
 
-            # 2. Ожидаем завершения всех трех задач
-            raw_exons, sequence_data, protein = await asyncio.gather(
-                exons_task,
-                sequence_task,
-                protein_task,
-                return_exceptions=True  # Обрабатываем исключения по отдельности
-            )
+        # 2. Ожидаем завершения всех трех задач
+        raw_exons, sequence_data, protein = await asyncio.gather(
+            exons_task,
+            sequence_task,
+            protein_task,
+            return_exceptions=True  # Обрабатываем исключения по отдельности
+        )
 
-            # 3. Проверяем результаты на исключения
-            if isinstance(raw_exons, Exception):
-                raise Exception(f"Failed to get exons: {raw_exons}")
-            if isinstance(sequence_data, Exception):
-                raise Exception(f"Failed to get sequence data: {sequence_data}")
-            if isinstance(protein, Exception):
-                raise Exception(f"Failed to get protein: {protein}")
+        # 3. Проверяем результаты на исключения
+        if isinstance(raw_exons, Exception):
+            raise Exception(f"Failed to get exons: {raw_exons}")
+        if isinstance(sequence_data, Exception):
+            raise Exception(f"Failed to get sequence data: {sequence_data}")
+        if isinstance(protein, Exception):
+            raise Exception(f"Failed to get protein: {protein}")
 
-            # Распаковываем данные последовательности
-            sequence, utr5_start, utr3_start = sequence_data
+        # Распаковываем данные последовательности
+        sequence, utr5_start, utr3_start = sequence_data
             
-            # 4. Создаём UTR объекты
-            utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
+        # 4. Создаём UTR объекты
+        utr5, utr3 = self._build_utrs(sequence, utr5_start, utr3_start)
 
-            # 5. Создание экзонов
-            exons = self._build_exons(raw_exons, utr5, utr3)
+        # 5. Создание экзонов
+        exons = self._build_exons(raw_exons, utr5, utr3)
             
-            # 6. Создаём базовую последовательность
-            base_sequence = BaseSequence(
-                identifier=ncbi_id,
-                length=len(sequence),
-                exons=exons,
-                utr3=utr3,
-                utr5=utr5,
-                full_sequence=sequence
-            )
+        # 6. Создаём базовую последовательность
+        base_sequence = BaseSequence(
+            identifier=ncbi_id,
+            length=len(sequence),
+            exons=exons,
+            utr3=utr3,
+            utr5=utr5,
+            full_sequence=sequence
+        )
             
-            # 7. Создание транслируемого белка
-            translated_protein = self._translated_base_nucleotide(base_sequence, protein)
+        # 7. Создание транслируемого белка
+        translated_protein = self._translated_base_nucleotide(base_sequence, protein)
             
-            # 8. Создаём ген
-            gene = Gene(
-                protein=translated_protein,
-                base_sequence=base_sequence
-            )
+        # 8. Создаём ген
+        gene = Gene(
+            protein=translated_protein,
+            base_sequence=base_sequence
+        )
             
-            logger.info(f"Gene built from NCBI: {len(exons)} exons")
-            return gene
-            
-        except Exception as e:
-            logger.error(f"Error building gene from NCBI: {e}", exc_info=True)
-            return None
+        logger.info(f"Gene built from NCBI: {len(exons)} exons")
+        return gene
     
     async def _build_protein_from_uniprot(self, protein_id: str) -> Protein:
         """
         Построить объект Protein из данных UniProt
         """
-        try:
-            # 1. Получаем последовательность белка
-            protein_seq = await self.uniprot_client.get_sequence_data(protein_id)
+        # 1. Получаем последовательность белка
+        protein_seq = await self.uniprot_client.get_sequence_data(protein_id)
             
-            # 2. Получаем домены белка (start, end, description)
-            domains_data = await self.uniprot_client.get_protein_domains(protein_id)
+        # 2. Получаем домены белка (start, end, description)
+        domains_data = await self.uniprot_client.get_protein_domains(protein_id)
             
-            # 3. Создаём объекты ProteinDomain
-            domains = self._build_protein_domains(protein_seq, domains_data)
+        # 3. Создаём объекты ProteinDomain
+        domains = self._build_protein_domains(protein_seq, domains_data)
             
-            # 4. Создаём объект Protein
-            protein = Protein(
-                identifier=protein_id,
-                sequence=protein_seq,
-                length=len(protein_seq),
-                domains=domains
-            )
+        # 4. Создаём объект Protein
+        protein = Protein(
+            identifier=protein_id,
+            sequence=protein_seq,
+            length=len(protein_seq),
+            domains=domains
+        )
             
-            return protein
-            
-        except Exception as e:
-            logger.error(f"Error building protein {protein_id}: {e}")
-            return None
+        return protein
     
     def _build_exons(self, raw_exons: List[Tuple[int, int]], utr5: UTR, utr3: UTR) -> List[Exon]:
         """
