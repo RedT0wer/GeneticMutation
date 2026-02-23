@@ -2,6 +2,7 @@
 from typing import Dict, List, Tuple, Any, Optional
 import httpx
 from .api_utils import APIError, retry_on_failure
+from app.services.cache_service import cache
 from config import config
 
 class UniProtClient:
@@ -35,7 +36,8 @@ class UniProtClient:
             raise APIError(f"Failed to get UniProt domains: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _fetch_uniprot_seq(self, identifier: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _fetch_uniprot_seq(self, identifier: str, task: str = "seq") -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
         url = config.UNIPROT_REST_URL + identifier
         
@@ -47,7 +49,8 @@ class UniProtClient:
             return response.json()
 
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _fetch_uniprot_dom(self, identifier: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _fetch_uniprot_dom(self, identifier: str, task: str = "dom") -> Dict[str, Any]:
         """Получить данные из UniProt REST API"""
         url = config.UNIPROT_REST_URL + identifier + ".json" + "?fields=ft_domain%2Cft_region"
         

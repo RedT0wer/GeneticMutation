@@ -3,6 +3,7 @@ import xmltodict
 from typing import List, Dict, Any, Optional, Tuple
 import httpx
 from .api_utils import APIError, retry_on_failure
+from app.services.cache_service import cache
 from ..models.gene_models import Exon
 from config import config
 
@@ -36,7 +37,8 @@ class NCBIClient:
             raise APIError(f"Failed to get NCBI sequence: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _fetch_ncbi_data(self, identifier: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _fetch_ncbi_data(self, identifier: str, task: str = "seq_exons") -> Dict[str, Any]:
         """Получить данные из NCBI EUtils"""
         url = config.NCBI_EUTILS_URL
         params = {

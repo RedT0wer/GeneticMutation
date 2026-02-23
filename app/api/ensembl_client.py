@@ -2,6 +2,7 @@
 from typing import List, Dict, Any, Optional, Tuple
 import httpx
 from .api_utils import APIError, retry_on_failure
+from app.services.cache_service import cache
 from ..models.gene_models import Exon
 from config import config
 
@@ -40,7 +41,8 @@ class EnsemblClient:
             raise APIError(f"Failed to get sequence: {e}")
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _get_gene_with_exons(self, gene_id: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _get_gene_with_exons(self, gene_id: str, task: str = "exons") -> Dict[str, Any]:
         """Получить расширенную информацию о гене с экзонами"""
         url = config.ENSEMBL_REST_URL_LOOKUP + gene_id
         params = {
@@ -56,7 +58,8 @@ class EnsemblClient:
             return response.json()
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _get_exon_sequences(self, transcript_id: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _get_exon_sequences(self, transcript_id: str, task: str = "seq") -> Dict[str, Any]:
         """Получить последовательности экзонов"""
         url = config.ENSEMBL_REST_URL_SEQUENCE + transcript_id
         params = {
@@ -74,7 +77,8 @@ class EnsemblClient:
             return response.json()
     
     @retry_on_failure(max_retries=3, delay=1.0)
-    async def _get_sequence(self, identifier: str) -> Dict[str, Any]:
+    @cache.cached
+    async def _get_sequence(self, identifier: str, task: str = "seq") -> Dict[str, Any]:
         """Получить последовательность (оригинальный метод)"""
         url = config.ENSEMBL_REST_URL_SEQUENCE + identifier
         params = {
