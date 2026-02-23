@@ -159,7 +159,7 @@ class DeletionStrategy(SequenceMutationStrategy):
     def _build_mutated_sequence(self, original_sequence: str, 
                               start_pos: int, end_pos: int, utr3: UTR) -> str:
         """Построить мутированную последовательность с удалением"""
-        return original_sequence[:start_pos] + original_sequence[end_pos + 1:]
+        return original_sequence[:start_pos] + original_sequence[end_pos + 1:utr3.start_position]
     
     def execute(self, mutation: DeletionMutation, gene: Gene) -> BaseMutationResult:
         start_position = mutation.start_position
