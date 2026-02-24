@@ -11,6 +11,39 @@ function compileTemplate(templateId, data) {
     return compiledTemplates[templateId](data);
 }
 
+const aaCharge = {
+  // Hydrophobic (Nonpolar) — H
+  A: "H", // Alanine
+  V: "H", // Valine
+  L: "H", // Leucine
+  I: "H", // Isoleucine
+  F: "H", // Phenylalanine
+  M: "H", // Methionine
+  W: "H", // Tryptophan
+
+  // Polar (Uncharged) — 0
+  S: "0", // Serine
+  T: "0", // Threonine
+  Y: "0", // Tyrosine
+  N: "0", // Asparagine
+  Q: "0", // Glutamine
+
+  // Negatively Charged (Acidic) — -
+  D: "-", // Aspartate (Asp)
+  E: "-", // Glutamate (Glu)
+
+  // Positively Charged (Basic) — +
+  K: "+", // Lysine
+  R: "+", // Arginine
+  H: "+", // Histidine
+
+  // Special cases — null
+  P: "null", // Proline
+  G: "null", // Glycine
+  C: "null", // Cysteine
+  "*": "null",
+};
+
 
 // Отображение статуса
 function showStatus(message, type = 'info') {
@@ -212,6 +245,7 @@ function createDomainElement(domainData) {
                 
         const aminoacidData = {
             position_aminoacid: positionAminoacid,
+            charge: aaCharge[aminoacid],
             aminoacid: aminoacid
         };
                 

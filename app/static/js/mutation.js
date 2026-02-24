@@ -339,11 +339,22 @@ function Substitution(position, new_nucleotide, new_aminoacid) {
     new_nucleotide_element.innerText = "(" + new_nucleotide + ")";
     nucleotide.after(new_nucleotide_element);
 
-    aminoacid = FindAminoacid(position);
+    const aminoacid = FindAminoacid(position);
     aminoacid.classList.add("substitution");
-    new_aminoacid_element = aminoacid.cloneNode(true);
-    new_aminoacid_element.innerText = "(" + new_aminoacid + ")";
-    aminoacid.after(new_aminoacid_element);
+
+    const positionAminoacid = aminoacid.getAttribute('data-position-aminoacid');
+
+    const newAminoacidElement = aminoacid.cloneNode(true);
+    newAminoacidElement.innerText = "(" + new_aminoacid + ")";
+
+    const charge = aaCharge[new_aminoacid];
+
+    newAminoacidElement.setAttribute(
+      'title',
+      `Номер аминокислоты: ${positionAminoacid}\nЗаряд: ${charge}`
+    );
+
+    aminoacid.after(newAminoacidElement);
 }
 
 function Insertion(insertPos, sequence, stop_codon_pos, new_domain, different_position) {
