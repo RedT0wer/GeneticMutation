@@ -299,15 +299,13 @@ function Find(position) {
     domain_name = domain.getAttribute("data-domain-name");
 
     // Прокрутка к найденному элементу
-    setTimeout(() => {
-        if (nucleotide) {
-            nucleotide.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center',
-                inline: 'nearest'
-            });
-        }
-    }, 100);
+    if (nucleotide) {
+        nucleotide.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+        });
+    }
 
     result = {
         "nucleotide": nucleotide.innerText,
@@ -818,27 +816,25 @@ function scrollToMutation(position) {
         }
     }
 
-    // Затем прокручиваем к аминокислоте в доменах (с небольшой задержкой)
-    setTimeout(() => {
-        const aminoacid = FindAminoacid(position);
-        if (aminoacid) {
-            const domainsContainer = document.getElementById('domainsContainer');
-            const domainCard = aminoacid.closest('.domain-card');
+
+    const aminoacid = FindAminoacid(position);
+    if (aminoacid) {
+        const domainsContainer = document.getElementById('domainsContainer');
+        const domainCard = aminoacid.closest('.domain-card');
             
-            if (domainCard && domainsContainer) {
-                // Прокручиваем контейнер доменов
-                const containerRect = domainsContainer.getBoundingClientRect();
-                const elementRect = aminoacid.getBoundingClientRect();
-                const relativeTop = elementRect.top - containerRect.top + domainsContainer.scrollTop;
-                const targetScroll = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+        if (domainCard && domainsContainer) {
+            // Прокручиваем контейнер доменов
+            const containerRect = domainsContainer.getBoundingClientRect();
+            const elementRect = aminoacid.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top + domainsContainer.scrollTop;
+            const targetScroll = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
                 
-                domainsContainer.scrollTo({
-                    top: targetScroll,
-                    behavior: 'smooth'
-                });
-            }
+            domainsContainer.scrollTo({
+                top: targetScroll,
+                behavior: 'smooth'
+            });
         }
-    }, 500); // Задержка, чтобы сначала прокрутились экзоны
+    }
 }
 
 // 1)
